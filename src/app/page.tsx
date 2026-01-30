@@ -625,9 +625,9 @@ export default function PdfEditorPage() {
           </div>
 
           {/* サイドパネル */}
-          <div className="w-80 space-y-4">
-            {/* 選択位置（常に表示） */}
-            <div className="rounded bg-white p-4 shadow">
+          <div className="w-80 sticky top-4 self-start flex flex-col max-h-[calc(100vh-2rem)]">
+            {/* 選択位置（常に表示・固定） */}
+            <div className="flex-shrink-0 rounded bg-white p-4 shadow">
               <h3 className="mb-2 font-bold">📍 選択位置（左下）</h3>
               {clickedPosition ? (
                 <>
@@ -680,6 +680,8 @@ export default function PdfEditorPage() {
               </button>
             </div>
 
+            {/* スクロール可能なエリア */}
+            <div className="flex-1 overflow-y-auto space-y-4 mt-4">
             {/* 選択中フィールド編集 */}
             {selectedField && (() => {
               const field = fields.find((f) => f.id === selectedField);
@@ -863,6 +865,7 @@ export default function PdfEditorPage() {
                   <span>座標</span>
                 </span>
               </div>
+            </div>
             </div>
           </div>
         </div>
