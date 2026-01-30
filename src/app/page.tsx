@@ -175,10 +175,33 @@ export default function PdfEditorPage() {
 
     if (!isSelecting || !selectionStart || !selectionEnd) return;
 
-    const left = Math.min(selectionStart.x, selectionEnd.x);
-    const top = Math.min(selectionStart.y, selectionEnd.y);
-    const width = Math.abs(selectionEnd.x - selectionStart.x);
-    const height = Math.abs(selectionEnd.y - selectionStart.y);
+    let left = Math.min(selectionStart.x, selectionEnd.x);
+    let right = Math.max(selectionStart.x, selectionEnd.x);
+    let top = Math.min(selectionStart.y, selectionEnd.y);
+    let bottom = Math.max(selectionStart.y, selectionEnd.y);
+
+    // スナップ有効時はグリッドに合わせて描画
+    if (snapEnabled && pdfDimensions.height > 0) {
+      // Canvas座標をPDF座標に変換してスナップ
+      const pdfLeft = Math.round(left / scale);
+      const pdfRight = Math.round(right / scale);
+      const pdfTop = pdfDimensions.height - Math.round(top / scale);
+      const pdfBottom = pdfDimensions.height - Math.round(bottom / scale);
+
+      const snappedLeft = Math.round(pdfLeft / gridSize) * gridSize;
+      const snappedRight = Math.round(pdfRight / gridSize) * gridSize;
+      const snappedTop = Math.round(pdfTop / gridSize) * gridSize;
+      const snappedBottom = Math.round(pdfBottom / gridSize) * gridSize;
+
+      // Canvas座標に戻す
+      left = snappedLeft * scale;
+      right = snappedRight * scale;
+      top = (pdfDimensions.height - snappedTop) * scale;
+      bottom = (pdfDimensions.height - snappedBottom) * scale;
+    }
+
+    const width = right - left;
+    const height = bottom - top;
 
     // 半透明の塗り
     ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
@@ -198,12 +221,12 @@ export default function PdfEditorPage() {
     ctx.fill();
 
     // サイズ表示
-    const pdfWidth = Math.round(width / scale);
-    const pdfHeight = Math.round(height / scale);
+    const pdfWidth = Math.round(Math.abs(width) / scale);
+    const pdfHeight = Math.round(Math.abs(height) / scale);
     ctx.fillStyle = '#000';
     ctx.font = '12px monospace';
     ctx.fillText(`${pdfWidth} × ${pdfHeight} pt`, left + 5, top + 15);
-  }, [isSelecting, selectionStart, selectionEnd, scale]);
+  }, [isSelecting, selectionStart, selectionEnd, scale, snapEnabled, gridSize, pdfDimensions]);
 
   // グリッド描画（PDF座標系に合わせて下からグリッド線を描画）
   const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, scale: number, pdfHeight: number) => {
