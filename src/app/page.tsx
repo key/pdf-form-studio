@@ -42,6 +42,9 @@ export default function PdfEditorPage() {
   const [newFieldType, setNewFieldType] = useState<'text' | 'checkbox'>('text');
   const [clickedPosition, setClickedPosition] = useState<{ x: number; y: number; width?: number; height?: number } | null>(null);
   const [showGrid, setShowGrid] = useState(false);
+  const [gridSize, setGridSize] = useState(10);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [showGridPopover, setShowGridPopover] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -157,7 +160,7 @@ export default function PdfEditorPage() {
     } catch (error) {
       console.error('Failed to render page:', error);
     }
-  }, [pdfDoc, currentPage, scale, showGrid, fields, selectedField, hoveredField, clickedPosition, isSelecting]);
+  }, [pdfDoc, currentPage, scale, showGrid, gridSize, fields, selectedField, hoveredField, clickedPosition, isSelecting]);
 
   // オーバーレイに選択矩形を描画
   useEffect(() => {
@@ -204,21 +207,20 @@ export default function PdfEditorPage() {
 
   // グリッド描画
   const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, scale: number, pdfHeight: number) => {
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+    ctx.strokeStyle = 'rgba(180, 180, 180, 0.4)';
     ctx.lineWidth = 1;
     ctx.font = '10px monospace';
-    ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(120, 120, 120, 0.6)';
 
-    // 50pt間隔でグリッド線
-    const gridSize = 50 * scale;
-    for (let x = 0; x < width; x += gridSize) {
+    const gridSizeScaled = gridSize * scale;
+    for (let x = 0; x < width; x += gridSizeScaled) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
       ctx.stroke();
       ctx.fillText(`${Math.round(x / scale)}`, x + 2, 12);
     }
-    for (let y = 0; y < height; y += gridSize) {
+    for (let y = 0; y < height; y += gridSizeScaled) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
@@ -298,6 +300,25 @@ export default function PdfEditorPage() {
     y: (pdfDimensions.height - pdfY) * scale,
   });
 
+  // グリッドスナップヘルパー
+  const snapToGrid = (value: number): number => {
+    if (!snapEnabled) return value;
+    return Math.round(value / gridSize) * gridSize;
+  };
+
+  // 次のグリッド線までの移動（矢印キー用）
+  const snapToNextGrid = (currentValue: number, direction: 1 | -1): number => {
+    if (!snapEnabled) return Math.max(0, currentValue + direction);
+    const currentGrid = Math.floor(currentValue / gridSize) * gridSize;
+    if (direction > 0) {
+      return currentGrid + gridSize;
+    } else {
+      // 現在位置がグリッド線上なら1つ前へ、そうでなければ現在のグリッド線へ
+      const next = currentValue === currentGrid ? currentGrid - gridSize : currentGrid;
+      return Math.max(0, next); // 負の値を防ぐ
+    }
+  };
+
   // フィールドがクリック位置の近くにあるかチェック
   const findFieldAtPosition = (canvasX: number, canvasY: number): FieldDefinition | null => {
     for (const field of fields.filter((f) => f.page === currentPage)) {
@@ -364,7 +385,7 @@ export default function PdfEditorPage() {
     const canvasY = e.clientY - rect.top;
 
     if (isDragging && selectedField && dragStartPos) {
-      // フィールドをドラッグ中
+      // フィールドをドラッグ中（スナップはドラッグ終了時に適用）
       const dx = (canvasX - dragStartPos.x) / scale;
       const dy = -(canvasY - dragStartPos.y) / scale; // Y軸反転
 
@@ -396,14 +417,28 @@ export default function PdfEditorPage() {
       // 選択範囲が小さすぎる場合はポイント選択として扱う
       if (right - left < 5 && bottom - top < 5) {
         const pdfPos = canvasToPdf(selectionStart.x, selectionStart.y);
-        setClickedPosition(pdfPos);
+        setClickedPosition({ x: snapToGrid(pdfPos.x), y: snapToGrid(pdfPos.y) });
       } else {
         // 矩形の左下をPDF座標に変換
         const pdfPos = canvasToPdf(left, bottom);
         const width = Math.round((right - left) / scale);
         const height = Math.round((bottom - top) / scale);
-        setClickedPosition({ ...pdfPos, width, height });
+        setClickedPosition({
+          x: snapToGrid(pdfPos.x),
+          y: snapToGrid(pdfPos.y),
+          width: snapToGrid(width),
+          height: snapToGrid(height),
+        });
       }
+    }
+
+    // ドラッグ終了時にスナップを適用
+    if (isDragging && selectedField) {
+      setFields((prev) =>
+        prev.map((f) =>
+          f.id === selectedField ? { ...f, x: snapToGrid(f.x), y: snapToGrid(f.y) } : f
+        )
+      );
     }
 
     setIsDragging(false);
@@ -458,23 +493,23 @@ export default function PdfEditorPage() {
       // 入力フィールドにフォーカスがある場合はスキップ
       if (document.activeElement?.tagName === 'INPUT') return;
 
-      const step = e.shiftKey ? 10 : 1; // Shift押してると10pt移動
+      const step = e.shiftKey ? 10 : 1; // Shift押してると10pt移動（スナップOFF時）
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: f.y + step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: snapEnabled ? snapToNextGrid(f.y, 1) : f.y + step } : f)));
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: f.y - step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: snapEnabled ? snapToNextGrid(f.y, -1) : f.y - step } : f)));
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: f.x - step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: snapEnabled ? snapToNextGrid(f.x, -1) : f.x - step } : f)));
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: f.x + step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: snapEnabled ? snapToNextGrid(f.x, 1) : f.x + step } : f)));
           break;
         case 'Delete':
         case 'Backspace':
@@ -487,7 +522,7 @@ export default function PdfEditorPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedField]);
+  }, [selectedField, snapEnabled, gridSize]);
 
   // JSONエクスポート
   const exportJson = () => {
@@ -554,12 +589,56 @@ export default function PdfEditorPage() {
             onChange={(e) => e.target.files?.[0] && loadPdf(e.target.files[0])}
             className="rounded border px-2 py-1"
           />
-          <button
-            onClick={() => setShowGrid(!showGrid)}
-            className={`rounded px-3 py-1 ${showGrid ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
-          >
-            グリッド {showGrid ? 'ON' : 'OFF'}
-          </button>
+          {/* グリッド設定ポップオーバー */}
+          <div className="relative">
+            <button
+              onClick={() => setShowGridPopover(!showGridPopover)}
+              className={`rounded px-3 py-1 ${snapEnabled ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+              グリッド ▼
+            </button>
+            {showGridPopover && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowGridPopover(false)} />
+                <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border bg-white p-4 shadow-lg">
+                  <h3 className="mb-3 text-sm font-bold">グリッド設定</h3>
+                  <label className="mb-3 flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={showGrid}
+                      onChange={(e) => setShowGrid(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-sm">グリッド表示</span>
+                  </label>
+                  <label className="mb-3 flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={snapEnabled}
+                      onChange={(e) => setSnapEnabled(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <span className="text-sm">スナップ</span>
+                  </label>
+                  <div className="mb-2 text-xs text-gray-500">グリッド幅</div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[5, 10, 25, 50].map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setGridSize(size)}
+                        className={`rounded px-2 py-1 text-sm ${
+                          gridSize === size ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-xs text-gray-400">現在: {gridSize}pt</p>
+                </div>
+              </>
+            )}
+          </div>
           <select value={scale} onChange={(e) => setScale(Number(e.target.value))} className="rounded border px-2 py-1">
             <option value={1}>100%</option>
             <option value={1.5}>150%</option>
@@ -786,29 +865,29 @@ export default function PdfEditorPage() {
                     </div>
                   )}
                   <p className="text-xs text-gray-500">
-                    矢印キー: 1pt移動 / Shift+矢印: 10pt移動
+                    {snapEnabled ? `矢印キー/ボタン: ${gridSize}pt移動` : '矢印キー: 1pt移動 / Shift+矢印: 10pt移動'}
                   </p>
                   <div className="mt-2 flex gap-1">
                     <button
-                      onClick={() => updateFieldPosition(field.id, 0, 1)}
+                      onClick={() => setFieldPosition(field.id, field.x, snapToNextGrid(field.y, 1))}
                       className="rounded bg-gray-200 px-2 py-1 text-xs"
                     >
                       ↑
                     </button>
                     <button
-                      onClick={() => updateFieldPosition(field.id, 0, -1)}
+                      onClick={() => setFieldPosition(field.id, field.x, snapToNextGrid(field.y, -1))}
                       className="rounded bg-gray-200 px-2 py-1 text-xs"
                     >
                       ↓
                     </button>
                     <button
-                      onClick={() => updateFieldPosition(field.id, -1, 0)}
+                      onClick={() => setFieldPosition(field.id, snapToNextGrid(field.x, -1), field.y)}
                       className="rounded bg-gray-200 px-2 py-1 text-xs"
                     >
                       ←
                     </button>
                     <button
-                      onClick={() => updateFieldPosition(field.id, 1, 0)}
+                      onClick={() => setFieldPosition(field.id, snapToNextGrid(field.x, 1), field.y)}
                       className="rounded bg-gray-200 px-2 py-1 text-xs"
                     >
                       →
