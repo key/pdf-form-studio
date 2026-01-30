@@ -5,20 +5,20 @@
   "scripts": {
     "postinstall": "mkdir -p public && cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs public/",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
-    "next": "^14.2.0",
+    "next": "^16.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "pdfjs-dist": "^5.4.530"
   },
   "devDependencies": {
     "@types/node": "^25.1.0",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "^15.5.11",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.1.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.0",
