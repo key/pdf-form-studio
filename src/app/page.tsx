@@ -41,7 +41,7 @@ export default function PdfEditorPage() {
   const [newFieldName, setNewFieldName] = useState('');
   const [newFieldType, setNewFieldType] = useState<'text' | 'checkbox'>('text');
   const [clickedPosition, setClickedPosition] = useState<{ x: number; y: number; width?: number; height?: number } | null>(null);
-  const [showGrid, setShowGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
   const [gridSize, setGridSize] = useState(10);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [showGridPopover, setShowGridPopover] = useState(false);
@@ -205,7 +205,7 @@ export default function PdfEditorPage() {
     ctx.fillText(`${pdfWidth} × ${pdfHeight} pt`, left + 5, top + 15);
   }, [isSelecting, selectionStart, selectionEnd, scale]);
 
-  // グリッド描画
+  // グリッド描画（PDF座標系に合わせて下からグリッド線を描画）
   const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, scale: number, pdfHeight: number) => {
     ctx.strokeStyle = 'rgba(180, 180, 180, 0.4)';
     ctx.lineWidth = 1;
@@ -213,21 +213,25 @@ export default function PdfEditorPage() {
     ctx.fillStyle = 'rgba(120, 120, 120, 0.6)';
 
     const gridSizeScaled = gridSize * scale;
-    for (let x = 0; x < width; x += gridSizeScaled) {
+    // X軸: PDF座標 0, gridSize, 2*gridSize, ... に対応
+    for (let pdfX = 0; pdfX <= pdfHeight; pdfX += gridSize) {
+      const canvasX = pdfX * scale;
+      if (canvasX > width) break;
       ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
+      ctx.moveTo(canvasX, 0);
+      ctx.lineTo(canvasX, height);
       ctx.stroke();
-      ctx.fillText(`${Math.round(x / scale)}`, x + 2, 12);
+      ctx.fillText(`${pdfX}`, canvasX + 2, 12);
     }
-    for (let y = 0; y < height; y += gridSizeScaled) {
+    // Y軸: PDF座標 0, gridSize, 2*gridSize, ... に対応（Canvas座標は下から上）
+    for (let pdfY = 0; pdfY <= pdfHeight; pdfY += gridSize) {
+      const canvasY = (pdfHeight - pdfY) * scale;
+      if (canvasY < 0) break;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
+      ctx.moveTo(0, canvasY);
+      ctx.lineTo(width, canvasY);
       ctx.stroke();
-      // PDF座標系（下から上）で表示
-      const pdfY = Math.round(pdfHeight - y / scale);
-      ctx.fillText(`${pdfY}`, 2, y + 12);
+      ctx.fillText(`${pdfY}`, 2, canvasY - 2);
     }
   };
 
