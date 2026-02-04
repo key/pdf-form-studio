@@ -1,0 +1,110 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import type { FieldDefinition } from '@/types';
+
+interface FieldPopoverProps {
+  field: FieldDefinition;
+  position: { x: number; y: number };
+  onUpdate: (id: string, updates: Partial<FieldDefinition>) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}
+
+export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: FieldPopoverProps) {
+  const [name, setName] = useState(field.name);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // 名前変更を即時反映
+  useEffect(() => {
+    if (name !== field.name && name.trim()) {
+      onUpdate(field.id, { name: name.trim() });
+    }
+  }, [name, field.id, field.name, onUpdate]);
+
+  // 外側クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
+
+  // 開いた時にフォーカス
+  useEffect(() => {
+    inputRef.current?.select();
+  }, []);
+
+  const handleTypeChange = (type: 'text' | 'checkbox') => {
+    if (type === field.type) return;
+    const updates: Partial<FieldDefinition> = { type };
+    if (type === 'text') {
+      updates.width = 200;
+      updates.height = 20;
+    } else {
+      updates.width = undefined;
+      updates.height = undefined;
+    }
+    onUpdate(field.id, updates);
+  };
+
+  return (
+    <div
+      ref={popoverRef}
+      className="absolute z-30 w-56 rounded-lg border border-bp-border bg-bp-panel p-3 shadow-lg"
+      style={{
+        left: position.x,
+        top: position.y,
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="mb-2 w-full rounded border border-bp-border px-2 py-1 text-sm focus:border-bp-accent focus:outline-none"
+        placeholder="フィールド名"
+      />
+      <div className="mb-3 flex gap-3">
+        <label className="flex items-center gap-1 text-xs cursor-pointer">
+          <input
+            type="radio"
+            name={`field-type-${field.id}`}
+            checked={field.type === 'text'}
+            onChange={() => handleTypeChange('text')}
+            className="h-3 w-3"
+          />
+          テキスト
+        </label>
+        <label className="flex items-center gap-1 text-xs cursor-pointer">
+          <input
+            type="radio"
+            name={`field-type-${field.id}`}
+            checked={field.type === 'checkbox'}
+            onChange={() => handleTypeChange('checkbox')}
+            className="h-3 w-3"
+          />
+          チェック
+        </label>
+      </div>
+      <button
+        onClick={() => {
+          onDelete(field.id);
+          onClose();
+        }}
+        className="w-full rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+      >
+        削除
+      </button>
+    </div>
+  );
+}
