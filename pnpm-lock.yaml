@@ -12,8 +12,8 @@ importers:
         specifier: ^16.1.6
         version: 16.1.6(@babel/core@7.28.6)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       pdfjs-dist:
-        specifier: 5.4.530
-        version: 5.4.530
+        specifier: 4.9.155
+        version: 4.9.155
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -1667,9 +1667,9 @@ packages:
   path-parse@1.0.7:
     resolution: {integrity: sha512-LDJzPVEEEPR+y48z93A0Ed0yXb8pAByGWo/k5YYdYgpY2/2EsOsksJrq7lOHxryrVOn1ejG6oAp8ahvOIQD8sw==}
 
-  pdfjs-dist@5.4.530:
-    resolution: {integrity: sha512-r1hWsSIGGmyYUAHR26zSXkxYWLXLMd6AwqcaFYG9YUZ0GBf5GvcjJSeo512tabM4GYFhxhl5pMCmPr7Q72Rq2Q==}
-    engines: {node: '>=20.16.0 || >=22.3.0'}
+  pdfjs-dist@4.9.155:
+    resolution: {integrity: sha512-epRZn6DQQKCOEqbmFsxkiMBm1MHaNrnr6T4VBNP0bsDvdJdmrWcZbS5cgJXW68P0d3uJTlFhF6Wms2tlSgPYig==}
+    engines: {node: '>=20'}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -3714,7 +3714,7 @@ snapshots:
 
   path-parse@1.0.7: {}
 
-  pdfjs-dist@5.4.530:
+  pdfjs-dist@4.9.155:
     optionalDependencies:
       '@napi-rs/canvas': 0.1.89
 
