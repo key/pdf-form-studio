@@ -472,18 +472,41 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       const bottom = Math.max(selectionStart.y, selectionEnd.y);
 
       if (right - left < 5 && bottom - top < 5) {
+        // ポイントクリック → フィールド即時作成
         const pdfPos = canvasToPdf(selectionStart.x, selectionStart.y);
-        setClickedPosition({ x: snapToGrid(pdfPos.x), y: snapToGrid(pdfPos.y) });
+        const newField: FieldDefinition = {
+          id: `field_${Date.now()}`,
+          name: `field_${fields.length + 1}`,
+          type: 'text',
+          page: currentPage,
+          x: snapToGrid(pdfPos.x),
+          y: snapToGrid(pdfPos.y),
+          width: 200,
+          height: 20,
+          fontSize: 10,
+        };
+        setFields((prev) => [...prev, newField]);
+        setSelectedField(newField.id);
+        setClickedPosition(null);
       } else {
+        // 矩形ドラッグ → 矩形サイズでフィールド即時作成
         const pdfPos = canvasToPdf(left, bottom);
         const width = Math.round((right - left) / scale);
         const height = Math.round((bottom - top) / scale);
-        setClickedPosition({
+        const newField: FieldDefinition = {
+          id: `field_${Date.now()}`,
+          name: `field_${fields.length + 1}`,
+          type: 'text',
+          page: currentPage,
           x: snapToGrid(pdfPos.x),
           y: snapToGrid(pdfPos.y),
           width: snapToGrid(width),
           height: snapToGrid(height),
-        });
+          fontSize: 10,
+        };
+        setFields((prev) => [...prev, newField]);
+        setSelectedField(newField.id);
+        setClickedPosition(null);
       }
     }
 
