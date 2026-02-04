@@ -22,14 +22,20 @@ type PDFDocumentProxy = {
   getPage: (pageNumber: number) => Promise<PDFPageProxy>;
 };
 
+type RenderTask = {
+  promise: Promise<void>;
+  cancel: () => void;
+};
+
 type PDFPageProxy = {
   getViewport: (params: { scale: number }) => { width: number; height: number };
-  render: (params: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => { promise: Promise<void> };
+  render: (params: { canvasContext: CanvasRenderingContext2D; viewport: { width: number; height: number } }) => RenderTask;
 };
 
 export default function PdfEditorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const renderTaskRef = useRef<RenderTask | null>(null);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [pdfjsLib, setPdfjsLib] = useState<typeof import('pdfjs-dist') | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,6 +59,9 @@ export default function PdfEditorPage() {
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
   const [hoveredField, setHoveredField] = useState<string | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
 
   // PDF.jsを動的にロード
   useEffect(() => {
@@ -98,6 +107,12 @@ export default function PdfEditorPage() {
   const renderPage = useCallback(async () => {
     if (!pdfDoc || !canvasRef.current) return;
 
+    // 前のレンダリングタスクをキャンセル
+    if (renderTaskRef.current) {
+      renderTaskRef.current.cancel();
+      renderTaskRef.current = null;
+    }
+
     try {
       const page = await pdfDoc.getPage(currentPage);
       const viewport = page.getViewport({ scale });
@@ -116,10 +131,12 @@ export default function PdfEditorPage() {
         height: originalViewport.height,
       });
 
-      await page.render({
+      const renderTask = page.render({
         canvasContext: context,
         viewport,
-      }).promise;
+      });
+      renderTaskRef.current = renderTask;
+      await renderTask.promise;
 
       // グリッド描画
       if (showGrid) {
@@ -158,6 +175,10 @@ export default function PdfEditorPage() {
         overlay.height = canvas.height;
       }
     } catch (error) {
+      // レンダリングがキャンセルされた場合は無視
+      if (error instanceof Error && error.message.includes('Rendering cancelled')) {
+        return;
+      }
       console.error('Failed to render page:', error);
     }
   }, [pdfDoc, currentPage, scale, showGrid, gridSize, fields, selectedField, hoveredField, clickedPosition, isSelecting]);
@@ -306,6 +327,21 @@ export default function PdfEditorPage() {
           ctx.strokeRect(canvasX - 6, canvasY - 6, 12, 12);
         }
 
+        // 選択中のテキストフィールドに右上リサイズハンドルを描画
+        if (isSelected && field.type === 'text' && field.width && field.height) {
+          const handleX = canvasX + field.width * scale;
+          const handleY = canvasY - field.height * scale;
+          const handleSize = 8;
+
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(
+            handleX - handleSize / 2,
+            handleY - handleSize / 2,
+            handleSize,
+            handleSize
+          );
+        }
+
         // ラベル（背景付き）
         ctx.font = '11px sans-serif';
         const textWidth = ctx.measureText(field.name).width;
@@ -375,6 +411,18 @@ export default function PdfEditorPage() {
     return null;
   };
 
+  // リサイズハンドル判定
+  const isOnResizeHandle = (canvasX: number, canvasY: number, field: FieldDefinition): boolean => {
+    if (field.type !== 'text' || !field.width || !field.height) return false;
+
+    const fieldCanvas = pdfToCanvas(field.x, field.y);
+    const handleX = fieldCanvas.x + field.width * scale;
+    const handleY = fieldCanvas.y - field.height * scale;
+    const threshold = 10;
+
+    return Math.abs(canvasX - handleX) < threshold && Math.abs(canvasY - handleY) < threshold;
+  };
+
   // マウスダウン
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -383,6 +431,17 @@ export default function PdfEditorPage() {
     const rect = canvas.getBoundingClientRect();
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
+
+    // 選択中フィールドのリサイズハンドルをチェック
+    if (selectedField) {
+      const field = fields.find(f => f.id === selectedField);
+      if (field && isOnResizeHandle(canvasX, canvasY, field)) {
+        setIsResizing(true);
+        setResizeStartPos({ x: canvasX, y: canvasY });
+        setResizeStartSize({ width: field.width!, height: field.height! });
+        return;
+      }
+    }
 
     // 既存フィールドをクリックしたかチェック
     const clickedField = findFieldAtPosition(canvasX, canvasY);
@@ -411,7 +470,22 @@ export default function PdfEditorPage() {
     const canvasX = e.clientX - rect.left;
     const canvasY = e.clientY - rect.top;
 
-    if (isDragging && selectedField && dragStartPos) {
+    if (isResizing && selectedField && resizeStartPos && resizeStartSize) {
+      // リサイズ中
+      const dx = (canvasX - resizeStartPos.x) / scale;
+      const dy = -(canvasY - resizeStartPos.y) / scale; // Y軸反転
+
+      const newWidth = Math.max(10, resizeStartSize.width + dx);
+      const newHeight = Math.max(10, resizeStartSize.height + dy);
+
+      setFields((prev) =>
+        prev.map((f) =>
+          f.id === selectedField
+            ? { ...f, width: snapToGrid(Math.round(newWidth)), height: snapToGrid(Math.round(newHeight)) }
+            : f
+        )
+      );
+    } else if (isDragging && selectedField && dragStartPos) {
       // フィールドをドラッグ中（スナップはドラッグ終了時に適用）
       const dx = (canvasX - dragStartPos.x) / scale;
       const dy = -(canvasY - dragStartPos.y) / scale; // Y軸反転
@@ -429,6 +503,15 @@ export default function PdfEditorPage() {
       // ホバー検出
       const hovered = findFieldAtPosition(canvasX, canvasY);
       setHoveredField(hovered?.id || null);
+
+      // リサイズハンドル上ならカーソル変更
+      if (selectedField && overlayRef.current) {
+        const field = fields.find(f => f.id === selectedField);
+        if (field && isOnResizeHandle(canvasX, canvasY, field)) {
+          overlayRef.current.style.cursor = 'nesw-resize';
+          return;
+        }
+      }
     }
   };
 
@@ -459,6 +542,17 @@ export default function PdfEditorPage() {
       }
     }
 
+    // リサイズ終了時にグリッドスナップ適用
+    if (isResizing && selectedField) {
+      setFields((prev) =>
+        prev.map((f) =>
+          f.id === selectedField
+            ? { ...f, width: snapToGrid(f.width!), height: snapToGrid(f.height!) }
+            : f
+        )
+      );
+    }
+
     // ドラッグ終了時にスナップを適用
     if (isDragging && selectedField) {
       setFields((prev) =>
@@ -468,6 +562,9 @@ export default function PdfEditorPage() {
       );
     }
 
+    setIsResizing(false);
+    setResizeStartPos(null);
+    setResizeStartSize(null);
     setIsDragging(false);
     setDragStartPos(null);
     setIsSelecting(false);
