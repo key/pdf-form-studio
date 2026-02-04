@@ -647,7 +647,20 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       renderTaskRef.current = null;
     }
     if (pdfDoc) {
-      pdfDoc.destroy();
+      pdfDoc.destroy().catch((error) => {
+        console.error('Failed to destroy PDF document:', error);
+      });
+    }
+    const overlay = overlayRef.current;
+    if (overlay) {
+      const ctx = overlay.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, overlay.width, overlay.height);
+      overlay.style.cursor = '';
+    }
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     setPdfDoc(null);
     setPdfFileName('');
@@ -657,7 +670,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setTotalPages(0);
     setPdfDimensions({ width: 0, height: 0 });
     setHoveredField(null);
-  }, [pdfDoc]);
+  }, [pdfDoc, canvasRef, overlayRef]);
 
   useEffect(() => {
     renderPage();

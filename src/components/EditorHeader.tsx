@@ -168,7 +168,7 @@ export function EditorHeader({
             className="w-[380px] rounded-xl border border-bp-border bg-bp-panel p-6 shadow-lg"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] border border-red-200 bg-red-50 text-lg">
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] border border-red-200 bg-red-50 text-lg" role="img" aria-label="警告">
               ⚠️
             </div>
             <h3 id="close-dialog-title" className="mb-2 text-base font-semibold text-bp-text">PDFを閉じますか？</h3>
