@@ -109,7 +109,18 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     for (const field of fields.filter((f) => f.page === currentPage)) {
       const fieldCanvas = pdfToCanvas(field.x, field.y);
 
-      if (field.width && field.height) {
+      if (field.type === 'checkbox') {
+        // チェックボックス: fontSizeベースの正方形で判定
+        const boxSize = (field.fontSize || 10) * scale;
+        if (
+          canvasX >= fieldCanvas.x &&
+          canvasX <= fieldCanvas.x + boxSize &&
+          canvasY >= fieldCanvas.y - boxSize &&
+          canvasY <= fieldCanvas.y
+        ) {
+          return field;
+        }
+      } else if (field.width && field.height) {
         const rectWidth = field.width * scale;
         const rectHeight = field.height * scale;
         if (
@@ -197,8 +208,8 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
         ctx.lineWidth = isSelected ? 2 : 1;
 
         if (field.type === 'checkbox') {
-          // チェックボックス: 固定サイズの正方形
-          const boxSize = 12 * scale;
+          // チェックボックス: fontSizeベースの正方形
+          const boxSize = (field.fontSize || 10) * scale;
           ctx.fillStyle = isSelected
             ? 'rgba(37, 99, 235, 0.15)'
             : isHovered

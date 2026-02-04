@@ -50,11 +50,9 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
     if (type === 'text') {
       updates.width = 200;
       updates.height = 20;
-      updates.fontSize = 10;
     } else {
       updates.width = undefined;
       updates.height = undefined;
-      updates.fontSize = undefined;
     }
     onUpdate(field.id, updates);
   };
