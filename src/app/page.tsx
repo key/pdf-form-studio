@@ -41,6 +41,14 @@ export default function PdfEditorPage() {
         fileName={editor.pdfFileName}
         onExport={editor.exportJson}
         onImport={editor.importJson}
+        showGrid={editor.showGrid}
+        setShowGrid={editor.setShowGrid}
+        gridSize={editor.gridSize}
+        setGridSize={editor.setGridSize}
+        snapEnabled={editor.snapEnabled}
+        setSnapEnabled={editor.setSnapEnabled}
+        scale={editor.scale}
+        setScale={editor.setScale}
       />
 
       {/* メインエリア */}
@@ -78,14 +86,6 @@ export default function PdfEditorPage() {
           </div>
           {/* ビューコントロール */}
           <ViewControls
-            showGrid={editor.showGrid}
-            setShowGrid={editor.setShowGrid}
-            gridSize={editor.gridSize}
-            setGridSize={editor.setGridSize}
-            snapEnabled={editor.snapEnabled}
-            setSnapEnabled={editor.setSnapEnabled}
-            scale={editor.scale}
-            setScale={editor.setScale}
             currentPage={editor.currentPage}
             setCurrentPage={editor.setCurrentPage}
             totalPages={editor.totalPages}

@@ -25,6 +25,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [dragStartFieldPos, setDragStartFieldPos] = useState<{ x: number; y: number } | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number } | null>(null);
@@ -380,6 +381,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       setSelectedField(clickedField.id);
       setIsDragging(true);
       setDragStartPos({ x: canvasX, y: canvasY });
+      setDragStartFieldPos({ x: clickedField.x, y: clickedField.y });
       setSelectionStart(null);
       setSelectionEnd(null);
     } else {
@@ -413,16 +415,18 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
             : f
         )
       );
-    } else if (isDragging && selectedField && dragStartPos) {
+    } else if (isDragging && selectedField && dragStartPos && dragStartFieldPos) {
       const dx = (canvasX - dragStartPos.x) / scale;
       const dy = -(canvasY - dragStartPos.y) / scale;
 
+      const newX = snapToGrid(Math.round(dragStartFieldPos.x + dx));
+      const newY = snapToGrid(Math.round(dragStartFieldPos.y + dy));
+
       setFields((prev) =>
         prev.map((f) =>
-          f.id === selectedField ? { ...f, x: Math.round(f.x + dx), y: Math.round(f.y + dy) } : f
+          f.id === selectedField ? { ...f, x: newX, y: newY } : f
         )
       );
-      setDragStartPos({ x: canvasX, y: canvasY });
     } else if (isSelecting && selectionStart) {
       setSelectionEnd({ x: canvasX, y: canvasY });
     } else {
@@ -496,19 +500,12 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       );
     }
 
-    if (isDragging && selectedField) {
-      setFields((prev) =>
-        prev.map((f) =>
-          f.id === selectedField ? { ...f, x: snapToGrid(f.x), y: snapToGrid(f.y) } : f
-        )
-      );
-    }
-
     setIsResizing(false);
     setResizeStartPos(null);
     setResizeStartSize(null);
     setIsDragging(false);
     setDragStartPos(null);
+    setDragStartFieldPos(null);
     setIsSelecting(false);
   };
 
