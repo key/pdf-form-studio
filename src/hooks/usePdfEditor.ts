@@ -639,8 +639,15 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   // エディターリセット（DropZoneに戻る）
   const resetEditor = useCallback(() => {
     if (renderTaskRef.current) {
-      renderTaskRef.current.cancel();
+      try {
+        renderTaskRef.current.cancel();
+      } catch (error) {
+        console.error('Failed to cancel render task:', error);
+      }
       renderTaskRef.current = null;
+    }
+    if (pdfDoc) {
+      pdfDoc.destroy();
     }
     setPdfDoc(null);
     setPdfFileName('');
@@ -650,16 +657,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setTotalPages(0);
     setPdfDimensions({ width: 0, height: 0 });
     setHoveredField(null);
-    setIsDragging(false);
-    setIsSelecting(false);
-    setSelectionStart(null);
-    setSelectionEnd(null);
-    setDragStartPos(null);
-    setDragStartFieldPos(null);
-    setIsResizing(false);
-    setResizeStartPos(null);
-    setResizeStartSize(null);
-  }, []);
+  }, [pdfDoc]);
 
   useEffect(() => {
     renderPage();

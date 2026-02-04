@@ -53,6 +53,11 @@ export function EditorHeader({
     }
   };
 
+  const confirmClose = () => {
+    onClose();
+    setShowCloseDialog(false);
+  };
+
   return (
     <>
       <div className="flex items-center justify-between border-b border-bp-border bg-bp-panel px-4 py-2">
@@ -152,12 +157,21 @@ export function EditorHeader({
 
       {/* 確認ダイアログ */}
       {showCloseDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bp-text/40 backdrop-blur-sm">
-          <div className="w-[380px] rounded-xl border border-bp-border bg-bp-panel p-6 shadow-lg">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-bp-text/40 backdrop-blur-sm"
+          onClick={() => setShowCloseDialog(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="close-dialog-title"
+        >
+          <div
+            className="w-[380px] rounded-xl border border-bp-border bg-bp-panel p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-[10px] border border-red-200 bg-red-50 text-lg">
               ⚠️
             </div>
-            <h3 className="mb-2 text-base font-semibold text-bp-text">PDFを閉じますか？</h3>
+            <h3 id="close-dialog-title" className="mb-2 text-base font-semibold text-bp-text">PDFを閉じますか？</h3>
             <p className="mb-5 text-[13px] leading-relaxed text-bp-text/65">
               <span className="inline-flex items-center gap-1 rounded border border-bp-border bg-bp-bg px-2 py-0.5 font-mono text-xs font-medium text-bp-accent">
                 {fieldCount} 件
@@ -172,10 +186,7 @@ export function EditorHeader({
                 キャンセル
               </button>
               <button
-                onClick={() => {
-                  setShowCloseDialog(false);
-                  onClose();
-                }}
+                onClick={confirmClose}
                 className="rounded-md border border-red-600 bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-red-700"
               >
                 閉じる
