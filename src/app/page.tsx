@@ -25,7 +25,7 @@ export default function PdfEditorPage() {
 
   // 選択中フィールドのポップオーバー位置計算
   const selectedFieldData = editor.selectedField
-    ? editor.fields.find((f) => f.id === editor.selectedField)
+    ? editor.fields.find((f) => f.id === editor.selectedField && f.page === editor.currentPage)
     : null;
   const popoverPos = selectedFieldData
     ? (() => {
@@ -74,6 +74,7 @@ export default function PdfEditorPage() {
                 {/* フィールド編集ポップオーバー */}
                 {selectedFieldData && popoverPos && (
                   <FieldPopover
+                    key={selectedFieldData.id}
                     field={selectedFieldData}
                     position={popoverPos}
                     onUpdate={editor.updateField}

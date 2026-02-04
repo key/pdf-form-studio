@@ -21,7 +21,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
     if (name !== field.name && name.trim()) {
       onUpdate(field.id, { name: name.trim() });
     }
-  }, [name]);
+  }, [name, field.id, field.name, onUpdate]);
 
   // 外側クリックで閉じる
   useEffect(() => {

@@ -155,12 +155,12 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   };
 
   // グリッド描画（Blueprint風）
-  const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, scale: number, pdfHeight: number) => {
+  const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, scale: number, pdfWidth: number, pdfHeight: number) => {
     // 方眼紙風の薄いグリッド
     ctx.strokeStyle = 'rgba(191, 219, 254, 0.5)'; // bp-grid
     ctx.lineWidth = 0.5;
 
-    for (let pdfX = 0; pdfX <= pdfHeight; pdfX += gridSize) {
+    for (let pdfX = 0; pdfX <= pdfWidth; pdfX += gridSize) {
       const canvasX = pdfX * scale;
       if (canvasX > width) break;
       ctx.beginPath();
@@ -180,7 +180,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     // ルーラーラベル（モノスペース）
     ctx.font = '9px monospace';
     ctx.fillStyle = 'rgba(37, 99, 235, 0.4)'; // bp-accent 薄め
-    for (let pdfX = 0; pdfX <= pdfHeight; pdfX += gridSize) {
+    for (let pdfX = 0; pdfX <= pdfWidth; pdfX += gridSize) {
       const canvasX = pdfX * scale;
       if (canvasX > width) break;
       ctx.fillText(`${pdfX}`, canvasX + 1, 9);
@@ -305,7 +305,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       await renderTask.promise;
 
       if (showGrid) {
-        drawGrid(context, viewport.width, viewport.height, scale, originalViewport.height);
+        drawGrid(context, viewport.width, viewport.height, scale, originalViewport.width, originalViewport.height);
       }
 
       drawFieldMarkers(context, scale, originalViewport.height);
@@ -395,7 +395,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       if (field && isOnResizeHandle(canvasX, canvasY, field)) {
         setIsResizing(true);
         setResizeStartPos({ x: canvasX, y: canvasY });
-        setResizeStartSize({ width: field.width!, height: field.height! });
+        setResizeStartSize({ width: field.width ?? 0, height: field.height ?? 0 });
         return;
       }
     }
@@ -463,6 +463,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           overlayRef.current.style.cursor = 'nesw-resize';
           return;
         }
+        overlayRef.current.style.cursor = '';
       }
     }
   };
@@ -478,9 +479,10 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       if (right - left < 5 && bottom - top < 5) {
         // ポイントクリック → フィールド即時作成
         const pdfPos = canvasToPdf(selectionStart.x, selectionStart.y);
-        const newField: FieldDefinition = {
-          id: `field_${Date.now()}`,
-          name: `field_${fields.length + 1}`,
+        const id = crypto.randomUUID();
+        setFields((prev) => [...prev, {
+          id,
+          name: `field_${prev.length + 1}`,
           type: 'text',
           page: currentPage,
           x: snapToGrid(pdfPos.x),
@@ -488,18 +490,18 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           width: 200,
           height: 20,
           fontSize: 10,
-        };
-        setFields((prev) => [...prev, newField]);
-        setSelectedField(newField.id);
+        }]);
+        setSelectedField(id);
 
       } else {
         // 矩形ドラッグ → 矩形サイズでフィールド即時作成
         const pdfPos = canvasToPdf(left, bottom);
         const width = Math.round((right - left) / scale);
         const height = Math.round((bottom - top) / scale);
-        const newField: FieldDefinition = {
-          id: `field_${Date.now()}`,
-          name: `field_${fields.length + 1}`,
+        const id = crypto.randomUUID();
+        setFields((prev) => [...prev, {
+          id,
+          name: `field_${prev.length + 1}`,
           type: 'text',
           page: currentPage,
           x: snapToGrid(pdfPos.x),
@@ -507,9 +509,8 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           width: snapToGrid(width),
           height: snapToGrid(height),
           fontSize: 10,
-        };
-        setFields((prev) => [...prev, newField]);
-        setSelectedField(newField.id);
+        }]);
+        setSelectedField(id);
 
       }
     }
@@ -518,7 +519,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       setFields((prev) =>
         prev.map((f) =>
           f.id === selectedField
-            ? { ...f, width: snapToGrid(f.width!), height: snapToGrid(f.height!) }
+            ? { ...f, width: snapToGrid(f.width ?? 0), height: snapToGrid(f.height ?? 0) }
             : f
         )
       );
@@ -535,7 +536,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
 
   // フィールド削除
   const deleteField = (id: string) => {
-    setFields(fields.filter((f) => f.id !== id));
+    setFields((prev) => prev.filter((f) => f.id !== id));
     if (selectedField === id) setSelectedField(null);
   };
 
@@ -548,7 +549,9 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!selectedField) return;
-      if (document.activeElement?.tagName === 'INPUT') return;
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'SELECT' || activeTag === 'TEXTAREA') return;
+      if ((document.activeElement as HTMLElement)?.isContentEditable) return;
 
       const step = e.shiftKey ? 10 : 1;
       switch (e.key) {
@@ -606,17 +609,22 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
-        if (data.fields) {
-          setFields(
-            data.fields.map((f: Omit<FieldDefinition, 'id'>, i: number) => ({
-              ...f,
-              id: `field_${Date.now()}_${i}`,
-            }))
-          );
+        if (!Array.isArray(data.fields)) {
+          alert('JSONにfieldsフィールドがないか、配列ではありません');
+          return;
         }
-      } catch {
-        alert('JSONの読み込みに失敗しました');
+        setFields(
+          data.fields.map((f: Omit<FieldDefinition, 'id'>, i: number) => ({
+            ...f,
+            id: crypto.randomUUID(),
+          }))
+        );
+      } catch (error) {
+        alert(`JSONの読み込みに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
       }
+    };
+    reader.onerror = () => {
+      alert('ファイルの読み込みに失敗しました');
     };
     reader.readAsText(file);
   };

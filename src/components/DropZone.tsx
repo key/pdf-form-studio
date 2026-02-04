@@ -10,13 +10,21 @@ interface DropZoneProps {
 export function DropZone({ onFileSelect, isLoading }: DropZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const isPdfFile = (file: File): boolean => {
+    if (file.type === 'application/pdf') return true;
+    return file.name.toLowerCase().endsWith('.pdf');
+  };
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragOver(false);
       const file = e.dataTransfer.files[0];
-      if (file && file.type === 'application/pdf') {
+      if (!file) return;
+      if (isPdfFile(file)) {
         onFileSelect(file);
+      } else {
+        alert('PDFファイルを選択してください');
       }
     },
     [onFileSelect]
@@ -34,7 +42,12 @@ export function DropZone({ onFileSelect, isLoading }: DropZoneProps) {
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) onFileSelect(file);
+      if (!file) return;
+      if (isPdfFile(file)) {
+        onFileSelect(file);
+      } else {
+        alert('PDFファイルを選択してください');
+      }
     },
     [onFileSelect]
   );
