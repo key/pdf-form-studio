@@ -11,3 +11,16 @@
   --color-bp-field: #3b82f6;
   --color-bp-grid: #bfdbfe;
 }
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.shimmer-bar {
+  animation: shimmer 1.5s ease-in-out infinite;
+}

@@ -39,10 +39,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
     };
   }, [onClose]);
 
-  // 開いた時にフォーカス
-  useEffect(() => {
-    inputRef.current?.select();
-  }, []);
+  // inputRef is available for programmatic focus if needed
 
   const handleTypeChange = (type: 'text' | 'checkbox') => {
     if (type === field.type) return;

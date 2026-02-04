@@ -1,17 +1,32 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePdfEditor } from '@/hooks/usePdfEditor';
 import { DropZone } from '@/components/DropZone';
 import { EditorHeader } from '@/components/EditorHeader';
 import { ViewControls } from '@/components/ViewControls';
 import { FieldPopover } from '@/components/FieldPopover';
 import { FieldList } from '@/components/FieldList';
+import { DetectingOverlay } from '@/components/DetectingOverlay';
 
 export default function PdfEditorPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const hasTriggeredDetection = useRef(false);
   const editor = usePdfEditor({ canvasRef, overlayRef });
+
+  // pdfDocが設定されたら自動検出を実行
+  useEffect(() => {
+    if (editor.pdfDoc && editor.detectionAvailable && !hasTriggeredDetection.current) {
+      hasTriggeredDetection.current = true;
+      editor.runFieldDetection();
+    }
+  }, [editor.pdfDoc, editor.detectionAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleClose = () => {
+    hasTriggeredDetection.current = false;
+    editor.resetEditor();
+  };
 
   // PDF未読み込み → ドロップゾーン表示
   if (!editor.pdfDoc) {
@@ -41,7 +56,7 @@ export default function PdfEditorPage() {
         fileName={editor.pdfFileName}
         fieldCount={editor.fields.length}
         onExportFormPdf={editor.exportFormPdf}
-        onClose={editor.resetEditor}
+        onClose={handleClose}
         showGrid={editor.showGrid}
         setShowGrid={editor.setShowGrid}
         gridSize={editor.gridSize}
@@ -50,12 +65,28 @@ export default function PdfEditorPage() {
         setSnapEnabled={editor.setSnapEnabled}
         scale={editor.scale}
         setScale={editor.setScale}
+        detectionAvailable={editor.detectionAvailable}
+        isDetecting={editor.isDetecting}
+        onRunDetection={editor.runFieldDetection}
       />
+
+      {/* エラーバナー */}
+      {editor.detectionError && (
+        <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+          <span className="flex-1">フィールド検出エラー: {editor.detectionError}</span>
+          <button
+            onClick={editor.clearDetectionError}
+            className="rounded px-2 py-0.5 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* メインエリア */}
       <div className="flex flex-1 overflow-hidden">
         {/* PDFプレビュー */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="relative flex min-w-0 flex-1 flex-col">
           <div className="flex flex-1 items-start justify-center overflow-auto p-4">
             {editor.isPdfLoading ? (
               <div className="flex h-full items-center justify-center text-bp-text/40">
@@ -86,6 +117,8 @@ export default function PdfEditorPage() {
               </div>
             )}
           </div>
+          {/* 検出中オーバーレイ */}
+          {editor.isDetecting && <DetectingOverlay />}
           {/* ビューコントロール */}
           <ViewControls
             currentPage={editor.currentPage}

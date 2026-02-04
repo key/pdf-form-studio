@@ -15,6 +15,9 @@ interface EditorHeaderProps {
   setSnapEnabled: (v: boolean) => void;
   scale: number;
   setScale: (v: number) => void;
+  detectionAvailable?: boolean;
+  isDetecting?: boolean;
+  onRunDetection?: () => void;
 }
 
 export function EditorHeader({
@@ -30,9 +33,20 @@ export function EditorHeader({
   setSnapEnabled,
   scale,
   setScale,
+  detectionAvailable,
+  isDetecting,
+  onRunDetection,
 }: EditorHeaderProps) {
   const [showGridPopover, setShowGridPopover] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
+
+  const handleRunDetection = () => {
+    if (!onRunDetection) return;
+    if (fieldCount > 0) {
+      if (!window.confirm('既存のフィールドが上書きされます。AI検出を実行しますか？')) return;
+    }
+    onRunDetection();
+  };
 
   useEffect(() => {
     if (!showCloseDialog) return;
@@ -135,6 +149,20 @@ export function EditorHeader({
 
         {/* フォームPDF出力 */}
         <div className="flex items-center gap-2">
+          {detectionAvailable && (
+            <button
+              onClick={handleRunDetection}
+              disabled={isDetecting}
+              className={`rounded px-3 py-1 text-sm transition-colors ${
+                isDetecting
+                  ? 'bg-bp-border text-bp-text/40 cursor-not-allowed'
+                  : 'bg-purple-600 text-white hover:bg-purple-700'
+              }`}
+              title="AIでフォームフィールドを自動検出"
+            >
+              {isDetecting ? 'AI検出中...' : 'AI検出'}
+            </button>
+          )}
           <button
             onClick={onExportFormPdf}
             disabled={fieldCount === 0}

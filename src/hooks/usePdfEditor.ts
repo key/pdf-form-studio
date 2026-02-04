@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FieldDefinition, PDFDocumentProxy, RenderTask } from '@/types';
 import { validateFields, generateFormPdf } from '@/lib/pdfFormGenerator';
+import { checkDetectionAvailable, detectFields } from '@/lib/fieldDetection';
 
 interface UsePdfEditorOptions {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -36,6 +37,9 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
   const [pdfFileName, setPdfFileName] = useState('');
   const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectionError, setDetectionError] = useState<string | null>(null);
+  const [detectionAvailable, setDetectionAvailable] = useState(false);
 
   // PDF.jsを動的にロード
   useEffect(() => {
@@ -52,6 +56,11 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       }
     };
     loadPdfjs();
+  }, []);
+
+  // フィールド検出API利用可否チェック
+  useEffect(() => {
+    checkDetectionAvailable().then(setDetectionAvailable);
   }, []);
 
   // ページ変更時にフィールド選択をクリア
@@ -670,6 +679,28 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     }
   }, [pdfArrayBuffer, fields, pdfFileName]);
 
+  // フィールド自動検出を実行
+  const runFieldDetection = useCallback(async () => {
+    if (!pdfDoc || isDetecting) return;
+    setIsDetecting(true);
+    setDetectionError(null);
+    try {
+      const detectedFields = await detectFields(pdfDoc);
+      setFields(detectedFields);
+    } catch (error) {
+      console.error('Field detection failed:', error);
+      setDetectionError(
+        error instanceof Error ? error.message : 'フィールド検出に失敗しました',
+      );
+    } finally {
+      setIsDetecting(false);
+    }
+  }, [pdfDoc, isDetecting]);
+
+  const clearDetectionError = useCallback(() => {
+    setDetectionError(null);
+  }, []);
+
   // エディターリセット（DropZoneに戻る）
   const resetEditor = useCallback(() => {
     if (renderTaskRef.current) {
@@ -705,6 +736,8 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setTotalPages(0);
     setPdfDimensions({ width: 0, height: 0 });
     setHoveredField(null);
+    setIsDetecting(false);
+    setDetectionError(null);
   }, [pdfDoc, canvasRef, overlayRef]);
 
   useEffect(() => {
@@ -762,5 +795,12 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     pdfToCanvas,
     snapToGrid,
     snapToNextGrid,
+
+    // フィールド検出
+    isDetecting,
+    detectionError,
+    detectionAvailable,
+    runFieldDetection,
+    clearDetectionError,
   };
 }
