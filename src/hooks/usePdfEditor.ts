@@ -69,7 +69,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setIsPdfLoading(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      setPdfArrayBuffer(arrayBuffer);
+      setPdfArrayBuffer(arrayBuffer.slice(0));
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       setPdfDoc(pdf as unknown as PDFDocumentProxy);
       setTotalPages(pdf.numPages);
