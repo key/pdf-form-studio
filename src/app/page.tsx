@@ -54,7 +54,7 @@ export default function PdfEditorPage() {
       {/* メインエリア */}
       <div className="flex flex-1 overflow-hidden">
         {/* PDFプレビュー */}
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-1 items-start justify-center overflow-auto p-4">
             {editor.isPdfLoading ? (
               <div className="flex h-full items-center justify-center text-bp-text/40">
@@ -93,7 +93,7 @@ export default function PdfEditorPage() {
         </div>
 
         {/* 右パネル: フィールド一覧 */}
-        <div className="w-64">
+        <div className="w-64 shrink-0">
           <FieldList
             fields={editor.fields}
             currentPage={editor.currentPage}
