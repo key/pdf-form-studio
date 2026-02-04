@@ -145,12 +145,11 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     return Math.abs(canvasX - handleX) < threshold && Math.abs(canvasY - handleY) < threshold;
   };
 
-  // グリッド描画
+  // グリッド描画（Blueprint風）
   const drawGrid = (ctx: CanvasRenderingContext2D, width: number, height: number, scale: number, pdfHeight: number) => {
-    ctx.strokeStyle = 'rgba(180, 180, 180, 0.4)';
-    ctx.lineWidth = 1;
-    ctx.font = '10px monospace';
-    ctx.fillStyle = 'rgba(120, 120, 120, 0.6)';
+    // 方眼紙風の薄いグリッド
+    ctx.strokeStyle = 'rgba(191, 219, 254, 0.5)'; // bp-grid
+    ctx.lineWidth = 0.5;
 
     for (let pdfX = 0; pdfX <= pdfHeight; pdfX += gridSize) {
       const canvasX = pdfX * scale;
@@ -159,7 +158,6 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       ctx.moveTo(canvasX, 0);
       ctx.lineTo(canvasX, height);
       ctx.stroke();
-      ctx.fillText(`${pdfX}`, canvasX + 2, 12);
     }
     for (let pdfY = 0; pdfY <= pdfHeight; pdfY += gridSize) {
       const canvasY = (pdfHeight - pdfY) * scale;
@@ -168,11 +166,24 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       ctx.moveTo(0, canvasY);
       ctx.lineTo(width, canvasY);
       ctx.stroke();
-      ctx.fillText(`${pdfY}`, 2, canvasY - 2);
+    }
+
+    // ルーラーラベル（モノスペース）
+    ctx.font = '9px monospace';
+    ctx.fillStyle = 'rgba(37, 99, 235, 0.4)'; // bp-accent 薄め
+    for (let pdfX = 0; pdfX <= pdfHeight; pdfX += gridSize) {
+      const canvasX = pdfX * scale;
+      if (canvasX > width) break;
+      ctx.fillText(`${pdfX}`, canvasX + 1, 9);
+    }
+    for (let pdfY = 0; pdfY <= pdfHeight; pdfY += gridSize) {
+      const canvasY = (pdfHeight - pdfY) * scale;
+      if (canvasY < 0) break;
+      ctx.fillText(`${pdfY}`, 1, canvasY - 1);
     }
   };
 
-  // フィールドマーカー描画
+  // フィールドマーカー描画（Blueprint風）
   const drawFieldMarkers = (ctx: CanvasRenderingContext2D, scale: number, pdfHeight: number) => {
     fields
       .filter((f) => f.page === currentPage)
@@ -184,27 +195,33 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
         const isHovered = field.id === hoveredField;
         const markerSize = isSelected ? 8 : isHovered ? 7 : 6;
 
+        // テキストフィールドの矩形（破線）
         if (field.width && field.height) {
           const rectWidth = field.width * scale;
           const rectHeight = field.height * scale;
 
-          if (isSelected || isHovered) {
-            ctx.fillStyle = isSelected ? 'rgba(34, 197, 94, 0.15)' : 'rgba(251, 191, 36, 0.2)';
-            ctx.fillRect(canvasX, canvasY - rectHeight, rectWidth, rectHeight);
-            ctx.strokeStyle = isSelected ? '#22c55e' : '#f59e0b';
-            ctx.lineWidth = isSelected ? 2 : 1;
-            ctx.strokeRect(canvasX, canvasY - rectHeight, rectWidth, rectHeight);
-          }
+          ctx.fillStyle = isSelected
+            ? 'rgba(37, 99, 235, 0.1)'
+            : isHovered
+              ? 'rgba(59, 130, 246, 0.08)'
+              : 'rgba(59, 130, 246, 0.05)';
+          ctx.fillRect(canvasX, canvasY - rectHeight, rectWidth, rectHeight);
+
+          ctx.strokeStyle = isSelected ? '#2563eb' : isHovered ? '#3b82f6' : '#3b82f680';
+          ctx.lineWidth = isSelected ? 2 : 1;
+          ctx.setLineDash(isSelected ? [] : [4, 3]);
+          ctx.strokeRect(canvasX, canvasY - rectHeight, rectWidth, rectHeight);
+          ctx.setLineDash([]);
         }
 
-        ctx.strokeStyle = isSelected ? '#22c55e' : isHovered ? '#f59e0b' : '#3b82f6';
+        // クロスヘア
+        ctx.strokeStyle = isSelected ? '#2563eb' : isHovered ? '#3b82f6' : '#3b82f680';
         ctx.lineWidth = isSelected ? 2 : 1;
 
         ctx.beginPath();
         ctx.moveTo(canvasX, canvasY - markerSize);
         ctx.lineTo(canvasX, canvasY + markerSize);
         ctx.stroke();
-
         ctx.beginPath();
         ctx.moveTo(canvasX - markerSize, canvasY);
         ctx.lineTo(canvasX + markerSize, canvasY);
@@ -214,26 +231,21 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           ctx.strokeRect(canvasX - 6, canvasY - 6, 12, 12);
         }
 
+        // リサイズハンドル
         if (isSelected && field.type === 'text' && field.width && field.height) {
           const handleX = canvasX + field.width * scale;
           const handleY = canvasY - field.height * scale;
-          const handleSize = 8;
-
-          ctx.fillStyle = '#22c55e';
-          ctx.fillRect(
-            handleX - handleSize / 2,
-            handleY - handleSize / 2,
-            handleSize,
-            handleSize
-          );
+          ctx.fillStyle = '#2563eb';
+          ctx.fillRect(handleX - 4, handleY - 4, 8, 8);
         }
 
-        ctx.font = '11px sans-serif';
+        // ラベル（モノスペース）
+        ctx.font = '10px monospace';
         const textWidth = ctx.measureText(field.name).width;
-        ctx.fillStyle = isSelected ? 'rgba(34, 197, 94, 0.9)' : isHovered ? 'rgba(245, 158, 11, 0.9)' : 'rgba(59, 130, 246, 0.9)';
-        ctx.fillRect(canvasX + 4, canvasY - 16, textWidth + 6, 14);
+        ctx.fillStyle = isSelected ? '#2563eb' : isHovered ? '#3b82f6' : '#3b82f6cc';
+        ctx.fillRect(canvasX + 4, canvasY - 14, textWidth + 6, 13);
         ctx.fillStyle = '#fff';
-        ctx.fillText(field.name, canvasX + 7, canvasY - 5);
+        ctx.fillText(field.name, canvasX + 7, canvasY - 4);
       });
   };
 
