@@ -15,6 +15,7 @@ export interface FieldDefinition {
 export type PDFDocumentProxy = {
   numPages: number;
   getPage: (pageNumber: number) => Promise<PDFPageProxy>;
+  destroy: () => Promise<void>;
 };
 
 export type RenderTask = {

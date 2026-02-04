@@ -636,6 +636,42 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     reader.readAsText(file);
   };
 
+  // エディターリセット（DropZoneに戻る）
+  const resetEditor = useCallback(() => {
+    if (renderTaskRef.current) {
+      try {
+        renderTaskRef.current.cancel();
+      } catch (error) {
+        console.error('Failed to cancel render task:', error);
+      }
+      renderTaskRef.current = null;
+    }
+    if (pdfDoc) {
+      pdfDoc.destroy().catch((error) => {
+        console.error('Failed to destroy PDF document:', error);
+      });
+    }
+    const overlay = overlayRef.current;
+    if (overlay) {
+      const ctx = overlay.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, overlay.width, overlay.height);
+      overlay.style.cursor = '';
+    }
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    setPdfDoc(null);
+    setPdfFileName('');
+    setFields([]);
+    setSelectedField(null);
+    setCurrentPageRaw(1);
+    setTotalPages(0);
+    setPdfDimensions({ width: 0, height: 0 });
+    setHoveredField(null);
+  }, [pdfDoc, canvasRef, overlayRef]);
+
   useEffect(() => {
     renderPage();
   }, [renderPage]);
@@ -682,6 +718,9 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     // エクスポート/インポート
     exportJson,
     importJson,
+
+    // リセット
+    resetEditor,
 
     // 座標変換
     pdfToCanvas,

@@ -39,8 +39,10 @@ export default function PdfEditorPage() {
       {/* ヘッダー */}
       <EditorHeader
         fileName={editor.pdfFileName}
+        fieldCount={editor.fields.length}
         onExport={editor.exportJson}
         onImport={editor.importJson}
+        onClose={editor.resetEditor}
         showGrid={editor.showGrid}
         setShowGrid={editor.setShowGrid}
         gridSize={editor.gridSize}
