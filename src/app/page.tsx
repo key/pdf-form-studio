@@ -30,7 +30,7 @@ export default function PdfEditorPage() {
   const popoverPos = selectedFieldData
     ? (() => {
         const canvas = editor.pdfToCanvas(selectedFieldData.x, selectedFieldData.y);
-        return { x: canvas.x + 10, y: canvas.y - 10 };
+        return { x: canvas.x + 10, y: canvas.y + 10 };
       })()
     : null;
 
@@ -40,8 +40,7 @@ export default function PdfEditorPage() {
       <EditorHeader
         fileName={editor.pdfFileName}
         fieldCount={editor.fields.length}
-        onExport={editor.exportJson}
-        onImport={editor.importJson}
+        onExportFormPdf={editor.exportFormPdf}
         onClose={editor.resetEditor}
         showGrid={editor.showGrid}
         setShowGrid={editor.setShowGrid}
@@ -103,6 +102,8 @@ export default function PdfEditorPage() {
             selectedField={editor.selectedField}
             onSelect={editor.setSelectedField}
             onPageChange={editor.setCurrentPage}
+            onExport={editor.exportJson}
+            onImport={editor.importJson}
           />
         </div>
       </div>

@@ -8,6 +8,8 @@ interface FieldListProps {
   selectedField: string | null;
   onSelect: (id: string) => void;
   onPageChange: (page: number) => void;
+  onExport: () => void;
+  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function FieldList({
@@ -16,6 +18,8 @@ export function FieldList({
   selectedField,
   onSelect,
   onPageChange,
+  onExport,
+  onImport,
 }: FieldListProps) {
   return (
     <div className="flex h-full flex-col border-l border-bp-border bg-bp-panel">
@@ -65,6 +69,30 @@ export function FieldList({
             ))}
           </div>
         )}
+      </div>
+
+      {/* マッピングデータ */}
+      <div className="border-t border-bp-border p-3">
+        <div className="mb-2 text-xs font-medium text-bp-text/60">
+          マッピングデータ
+        </div>
+        <div className="flex gap-2">
+          <label className="flex-1 cursor-pointer rounded border border-bp-border px-2 py-1.5 text-center text-xs transition-colors hover:bg-bp-bg">
+            インポート
+            <input
+              type="file"
+              accept=".json"
+              onChange={onImport}
+              className="hidden"
+            />
+          </label>
+          <button
+            onClick={onExport}
+            className="flex-1 rounded border border-bp-border px-2 py-1.5 text-xs transition-colors hover:bg-bp-bg"
+          >
+            エクスポート
+          </button>
+        </div>
       </div>
 
     </div>

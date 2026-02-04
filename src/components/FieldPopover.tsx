@@ -48,7 +48,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
     if (type === field.type) return;
     const updates: Partial<FieldDefinition> = { type };
     if (type === 'text') {
-      updates.width = 200;
+      updates.width = 50;
       updates.height = 20;
     } else {
       updates.width = undefined;
@@ -96,6 +96,23 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
           チェック
         </label>
       </div>
+      {field.type === 'text' && (
+        <div className="mb-3 flex gap-1">
+          {(['left', 'center', 'right'] as const).map((a) => (
+            <button
+              key={a}
+              onClick={() => onUpdate(field.id, { align: a })}
+              className={`flex-1 rounded px-1.5 py-0.5 text-[10px] transition-colors ${
+                (field.align ?? 'left') === a
+                  ? 'bg-bp-accent text-white'
+                  : 'bg-bp-bg hover:bg-bp-border'
+              }`}
+            >
+              {a === 'left' ? '左' : a === 'center' ? '中央' : '右'}
+            </button>
+          ))}
+        </div>
+      )}
       <button
         onClick={() => {
           onDelete(field.id);

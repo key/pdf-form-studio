@@ -5,8 +5,7 @@ import { useEffect, useState } from 'react';
 interface EditorHeaderProps {
   fileName: string;
   fieldCount: number;
-  onExport: () => void;
-  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onExportFormPdf: () => void;
   onClose: () => void;
   showGrid: boolean;
   setShowGrid: (v: boolean) => void;
@@ -21,8 +20,7 @@ interface EditorHeaderProps {
 export function EditorHeader({
   fileName,
   fieldCount,
-  onExport,
-  onImport,
+  onExportFormPdf,
   onClose,
   showGrid,
   setShowGrid,
@@ -135,22 +133,19 @@ export function EditorHeader({
           </select>
         </div>
 
-        {/* インポート・エクスポート */}
+        {/* フォームPDF出力 */}
         <div className="flex items-center gap-2">
-          <label className="cursor-pointer rounded border border-bp-border px-3 py-1 text-sm hover:bg-bp-bg transition-colors">
-            インポート
-            <input
-              type="file"
-              accept=".json"
-              onChange={onImport}
-              className="hidden"
-            />
-          </label>
           <button
-            onClick={onExport}
-            className="rounded bg-bp-accent px-3 py-1 text-sm text-white hover:bg-bp-accent/90 transition-colors"
+            onClick={onExportFormPdf}
+            disabled={fieldCount === 0}
+            className={`rounded px-3 py-1 text-sm transition-colors ${
+              fieldCount === 0
+                ? 'bg-bp-border text-bp-text/40 cursor-not-allowed'
+                : 'bg-bp-accent text-white hover:bg-bp-accent/90'
+            }`}
+            title={fieldCount === 0 ? 'フィールドを作成してください' : 'AcroFormフィールド付きPDFをダウンロード'}
           >
-            エクスポート
+            フォームPDFを出力
           </button>
         </div>
       </div>

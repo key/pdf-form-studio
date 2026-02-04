@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FieldDefinition, PDFDocumentProxy, RenderTask } from '@/types';
+import { validateFields, generateFormPdf } from '@/lib/pdfFormGenerator';
 
 interface UsePdfEditorOptions {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -34,6 +35,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number } | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
   const [pdfFileName, setPdfFileName] = useState('');
+  const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
 
   // PDF.jsを動的にロード
   useEffect(() => {
@@ -67,6 +69,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setIsPdfLoading(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
+      setPdfArrayBuffer(arrayBuffer.slice(0));
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       setPdfDoc(pdf as unknown as PDFDocumentProxy);
       setTotalPages(pdf.numPages);
@@ -414,11 +417,13 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       setDragStartFieldPos({ x: clickedField.x, y: clickedField.y });
       setSelectionStart(null);
       setSelectionEnd(null);
+    } else if (selectedField) {
+      // ポップオーバーが開いている状態で空白クリック → 選択解除のみ
+      setSelectedField(null);
     } else {
       setIsSelecting(true);
       setSelectionStart({ x: canvasX, y: canvasY });
       setSelectionEnd({ x: canvasX, y: canvasY });
-      setSelectedField(null);
     }
   };
 
@@ -493,7 +498,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           page: currentPage,
           x: snapToGrid(pdfPos.x),
           y: snapToGrid(pdfPos.y),
-          width: 200,
+          width: 50,
           height: 20,
           fontSize: 10,
         }]);
@@ -559,23 +564,23 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       if (activeTag === 'INPUT' || activeTag === 'SELECT' || activeTag === 'TEXTAREA') return;
       if ((document.activeElement as HTMLElement)?.isContentEditable) return;
 
-      const step = e.shiftKey ? 10 : 1;
+      const fine = e.shiftKey; // Shift押下 = 1pt微調整
       switch (e.key) {
         case 'ArrowUp':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: snapEnabled ? snapToNextGrid(f.y, 1) : f.y + step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: fine ? f.y + 1 : snapEnabled ? snapToNextGrid(f.y, 1) : f.y + 1 } : f)));
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: snapEnabled ? snapToNextGrid(f.y, -1) : f.y - step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, y: fine ? f.y - 1 : snapEnabled ? snapToNextGrid(f.y, -1) : f.y - 1 } : f)));
           break;
         case 'ArrowLeft':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: snapEnabled ? snapToNextGrid(f.x, -1) : f.x - step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: fine ? f.x - 1 : snapEnabled ? snapToNextGrid(f.x, -1) : f.x - 1 } : f)));
           break;
         case 'ArrowRight':
           e.preventDefault();
-          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: snapEnabled ? snapToNextGrid(f.x, 1) : f.x + step } : f)));
+          setFields((prev) => prev.map((f) => (f.id === selectedField ? { ...f, x: fine ? f.x + 1 : snapEnabled ? snapToNextGrid(f.x, 1) : f.x + 1 } : f)));
           break;
         case 'Delete':
         case 'Backspace':
@@ -636,6 +641,35 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     reader.readAsText(file);
   };
 
+  // フォームPDFエクスポート
+  const exportFormPdf = useCallback(async () => {
+    if (!pdfArrayBuffer) {
+      alert('PDFデータが見つかりません');
+      return;
+    }
+
+    const errors = validateFields(fields);
+    if (errors.length > 0) {
+      const messages = errors.map((e) => e.message).join('\n');
+      alert(`エクスポートできません:\n\n${messages}`);
+      return;
+    }
+
+    try {
+      const pdfBytes = await generateFormPdf(pdfArrayBuffer, fields);
+      const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdfFileName ? pdfFileName.replace(/\.pdf$/i, '') + '_form.pdf' : 'form.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to generate form PDF:', error);
+      alert(`フォームPDFの生成に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, [pdfArrayBuffer, fields, pdfFileName]);
+
   // エディターリセット（DropZoneに戻る）
   const resetEditor = useCallback(() => {
     if (renderTaskRef.current) {
@@ -664,6 +698,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     }
     setPdfDoc(null);
     setPdfFileName('');
+    setPdfArrayBuffer(null);
     setFields([]);
     setSelectedField(null);
     setCurrentPageRaw(1);
@@ -718,6 +753,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     // エクスポート/インポート
     exportJson,
     importJson,
+    exportFormPdf,
 
     // リセット
     resetEditor,
