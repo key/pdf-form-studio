@@ -1,3 +1,13 @@
 @import "tailwindcss";
 
 @source "./src/app/**/*.{js,ts,jsx,tsx,mdx}";
+
+@theme {
+  --color-bp-bg: #f0f4f8;
+  --color-bp-panel: #ffffff;
+  --color-bp-border: #c9d6e3;
+  --color-bp-text: #2d3a4a;
+  --color-bp-accent: #2563eb;
+  --color-bp-field: #3b82f6;
+  --color-bp-grid: #bfdbfe;
+}
