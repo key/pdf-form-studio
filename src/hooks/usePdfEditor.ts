@@ -601,7 +601,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'pdf_field_mapping.json';
+    a.download = pdfFileName ? pdfFileName.replace(/\.pdf$/i, '') + '.json' : 'pdf_field_mapping.json';
     a.click();
     URL.revokeObjectURL(url);
   };
