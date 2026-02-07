@@ -28,23 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - name: Use CI compose config
+        run: sed -i 's/compose.yaml/compose.ci.yaml/' .devcontainer/devcontainer.json
+
+      - name: Build and lint in dev container
+        uses: devcontainers/ci@v0.3
         with:
-          version: 9
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Build
-        run: pnpm build
+          runCmd: |
+            pnpm install
+            pnpm lint
+            pnpm build
 
   e2e:
     needs: build
