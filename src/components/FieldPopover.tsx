@@ -58,6 +58,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
     <div
       ref={popoverRef}
       className="absolute z-30 w-56 rounded-lg border border-bp-border bg-bp-panel p-3 shadow-lg"
+      data-testid="field-popover"
       style={{
         left: position.x,
         top: position.y,
@@ -70,6 +71,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
         onChange={(e) => setName(e.target.value)}
         className="mb-2 w-full rounded border border-bp-border px-2 py-1 text-sm focus:border-bp-accent focus:outline-none"
         placeholder="フィールド名"
+        data-testid="field-name-input"
       />
       <div className="mb-3 flex gap-3">
         <label className="flex items-center gap-1 text-xs cursor-pointer">
@@ -79,6 +81,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
             checked={field.type === 'text'}
             onChange={() => handleTypeChange('text')}
             className="h-3 w-3"
+            data-testid="field-type-text"
           />
           テキスト
         </label>
@@ -89,6 +92,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
             checked={field.type === 'checkbox'}
             onChange={() => handleTypeChange('checkbox')}
             className="h-3 w-3"
+            data-testid="field-type-checkbox"
           />
           チェック
         </label>
@@ -116,6 +120,7 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
           onClose();
         }}
         className="w-full rounded border border-red-200 px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
+        data-testid="delete-field-button"
       >
         削除
       </button>

@@ -22,7 +22,7 @@ export function FieldList({
   onImport,
 }: FieldListProps) {
   return (
-    <div className="flex h-full flex-col border-l border-bp-border bg-bp-panel">
+    <div className="flex h-full flex-col border-l border-bp-border bg-bp-panel" data-testid="field-list">
       {/* ヘッダー */}
       <div className="flex items-center justify-between border-b border-bp-border px-3 py-2">
         <span className="text-sm font-medium">
@@ -84,11 +84,13 @@ export function FieldList({
               accept=".json"
               onChange={onImport}
               className="hidden"
+              data-testid="import-json-input"
             />
           </label>
           <button
             onClick={onExport}
             className="flex-1 rounded border border-bp-border px-2 py-1.5 text-xs transition-colors hover:bg-bp-bg"
+            data-testid="export-json-button"
           >
             エクスポート
           </button>

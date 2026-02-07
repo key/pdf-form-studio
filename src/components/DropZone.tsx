@@ -68,6 +68,7 @@ export function DropZone({ onFileSelect, isLoading }: DropZoneProps) {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      data-testid="dropzone"
     >
       <label
         className={`flex h-80 w-full max-w-2xl cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors ${
@@ -84,6 +85,7 @@ export function DropZone({ onFileSelect, isLoading }: DropZoneProps) {
           accept=".pdf"
           onChange={handleFileInput}
           className="hidden"
+          data-testid="pdf-file-input"
         />
       </label>
     </div>

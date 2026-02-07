@@ -27,3 +27,8 @@ next-env.d.ts
 
 # generated files
 public/pdf.worker.min.mjs
+
+# playwright
+test-results/
+playwright-report/
+e2e/fixtures/generated/

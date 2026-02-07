@@ -94,13 +94,14 @@ export default function PdfEditorPage() {
               </div>
             ) : (
               <div className="relative inline-block">
-                <canvas ref={canvasRef} className="block" />
+                <canvas ref={canvasRef} className="block" data-testid="pdf-canvas" />
                 <canvas
                   ref={overlayRef}
                   onMouseDown={editor.handleMouseDown}
                   onMouseMove={editor.handleMouseMove}
                   onMouseUp={editor.handleMouseUp}
                   onMouseLeave={editor.handleMouseUp}
+                  data-testid="overlay-canvas"
                   className={`absolute inset-0 ${editor.isDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
                 />
                 {/* フィールド編集ポップオーバー */}

@@ -20,16 +20,18 @@ export function ViewControls({
           onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
           disabled={currentPage <= 1}
           className="rounded px-1.5 py-0.5 text-xs hover:bg-bp-bg disabled:opacity-30"
+          data-testid="prev-page-button"
         >
           ◀
         </button>
-        <span className="font-mono text-xs">
+        <span className="font-mono text-xs" data-testid="page-indicator">
           {currentPage}/{totalPages}
         </span>
         <button
           onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
           className="rounded px-1.5 py-0.5 text-xs hover:bg-bp-bg disabled:opacity-30"
+          data-testid="next-page-button"
         >
           ▶
         </button>

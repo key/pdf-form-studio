@@ -75,11 +75,12 @@ export function EditorHeader({
       <div className="flex items-center justify-between border-b border-bp-border bg-bp-panel px-4 py-2">
         <div className="flex items-center gap-2">
           <span className="text-sm opacity-60">📄</span>
-          <span className="text-sm font-medium font-mono">{fileName}</span>
+          <span className="text-sm font-medium font-mono" data-testid="file-name">{fileName}</span>
           <button
             onClick={handleClose}
             className="flex h-[22px] w-[22px] items-center justify-center rounded text-bp-text opacity-35 transition-all hover:bg-red-50 hover:text-red-600 hover:opacity-100"
             title="PDFを閉じる"
+            data-testid="close-button"
           >
             ✕
           </button>
@@ -93,6 +94,7 @@ export function EditorHeader({
               className={`rounded px-2 py-1 text-xs transition-colors ${
                 snapEnabled ? 'bg-bp-accent text-white' : 'bg-bp-bg text-bp-text'
               }`}
+              data-testid="grid-button"
             >
               グリッド {gridSize}pt
             </button>
@@ -140,6 +142,7 @@ export function EditorHeader({
             value={scale}
             onChange={(e) => setScale(Number(e.target.value))}
             className="rounded border border-bp-border bg-bp-panel px-2 py-1 text-xs font-mono"
+            data-testid="zoom-select"
           >
             <option value={1}>100%</option>
             <option value={1.5}>150%</option>
@@ -172,6 +175,7 @@ export function EditorHeader({
                 : 'bg-bp-accent text-white hover:bg-bp-accent/90'
             }`}
             title={fieldCount === 0 ? 'フィールドを作成してください' : 'AcroFormフィールド付きPDFをダウンロード'}
+            data-testid="export-form-pdf-button"
           >
             フォームPDFを出力
           </button>
@@ -186,6 +190,7 @@ export function EditorHeader({
           role="dialog"
           aria-modal="true"
           aria-labelledby="close-dialog-title"
+          data-testid="close-confirm-dialog"
         >
           <div
             className="w-[380px] rounded-xl border border-bp-border bg-bp-panel p-6 shadow-lg"
@@ -205,12 +210,14 @@ export function EditorHeader({
               <button
                 onClick={() => setShowCloseDialog(false)}
                 className="rounded-md border border-bp-border px-4 py-2 text-[13px] font-medium text-bp-text transition-colors hover:bg-bp-bg"
+                data-testid="cancel-close-button"
               >
                 キャンセル
               </button>
               <button
                 onClick={confirmClose}
                 className="rounded-md border border-red-600 bg-red-600 px-4 py-2 text-[13px] font-medium text-white transition-colors hover:bg-red-700"
+                data-testid="confirm-close-button"
               >
                 閉じる
               </button>
