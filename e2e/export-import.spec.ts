@@ -12,11 +12,9 @@ test.describe('エクスポート・インポート', () => {
   });
 
   test('JSONエクスポートでダウンロードされる', async () => {
-    // フィールドを作成
     await editor.clickOnCanvas(200, 300);
     await editor.closePopover();
 
-    // ダウンロードイベントを待ち受け
     const downloadPromise = editor.page.waitForEvent('download');
     await editor.exportJsonButton.click();
     const download = await downloadPromise;
@@ -25,22 +23,16 @@ test.describe('エクスポート・インポート', () => {
   });
 
   test('JSONエクスポートの内容にフィールド情報が含まれる', async () => {
-    // フィールドを作成して名前を変更
     await editor.clickOnCanvas(200, 300);
     await editor.fieldNameInput.fill('test_name');
     await editor.closePopover();
 
-    // JSONをダウンロードして内容を検証
     const downloadPromise = editor.page.waitForEvent('download');
     await editor.exportJsonButton.click();
     const download = await downloadPromise;
 
-    const stream = await download.createReadStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(chunk as Buffer);
-    }
-    const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+    const buf = await editor.readDownloadBuffer(download);
+    const json = JSON.parse(buf.toString('utf-8'));
 
     expect(json).toHaveProperty('fields');
     expect(json).toHaveProperty('pdfDimensions');
@@ -51,13 +43,11 @@ test.describe('エクスポート・インポート', () => {
       type: 'text',
       page: 1,
     });
-    // 座標が数値であること
     expect(typeof json.fields[0].x).toBe('number');
     expect(typeof json.fields[0].y).toBe('number');
   });
 
   test('JSONインポートでフィールドが復元される', async () => {
-    // テスト用JSONデータを作成（importJsonは { fields: [...] } 形式を期待する）
     const fieldData = {
       fields: [
         {
@@ -80,17 +70,41 @@ test.describe('エクスポート・インポート', () => {
       buffer: jsonBuffer,
     });
 
-    // フィールドが一覧に表示される
     const item = editor.fieldList.locator('button').filter({ hasText: 'imported_field' });
     await expect(item).toBeVisible();
   });
 
+  test('不正なJSONインポートでアプリがクラッシュしない', async ({ page }) => {
+    // fieldsプロパティがないJSON → alertが出るが、アプリは壊れない
+    let dialogMessage = '';
+    page.on('dialog', async (dialog) => {
+      dialogMessage = dialog.message();
+      await dialog.dismiss();
+    });
+
+    const invalidData = { noFields: true };
+    const jsonBuffer = Buffer.from(JSON.stringify(invalidData));
+
+    await editor.importJsonInput.setInputFiles({
+      name: 'invalid.json',
+      mimeType: 'application/json',
+      buffer: jsonBuffer,
+    });
+
+    // alertが発火すること
+    await expect(() => expect(dialogMessage).toBeTruthy()).toPass({ timeout: 5000 });
+
+    // アプリが正常に動作し続ける（DropZoneに戻ったりしない）
+    await expect(editor.overlayCanvas).toBeVisible();
+    // 新しいフィールドが作成できる
+    await editor.clickOnCanvas(200, 300);
+    await expect(editor.fieldPopover).toBeVisible();
+  });
+
   test('フォームPDF出力でダウンロードされる', async () => {
-    // フィールドを作成
     await editor.clickOnCanvas(200, 300);
     await editor.closePopover();
 
-    // ダウンロードイベントを待ち受け
     const downloadPromise = editor.page.waitForEvent('download');
     await editor.exportFormPdfButton.click();
     const download = await downloadPromise;
@@ -99,29 +113,20 @@ test.describe('エクスポート・インポート', () => {
   });
 
   test('フォームPDF出力にAcroFormフィールドが含まれる', async () => {
-    // テキストフィールドを作成して名前を設定
     await editor.clickOnCanvas(200, 300);
     await editor.fieldNameInput.fill('form_text');
     await editor.closePopover();
 
-    // チェックボックスを作成して名前を設定
     await editor.clickOnCanvas(200, 400);
     await editor.fieldTypeCheckbox.click();
     await editor.fieldNameInput.fill('form_check');
     await editor.closePopover();
 
-    // PDFをダウンロードしてpdf-libで検証
     const downloadPromise = editor.page.waitForEvent('download');
     await editor.exportFormPdfButton.click();
     const download = await downloadPromise;
 
-    const stream = await download.createReadStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(chunk as Buffer);
-    }
-    const pdfBytes = Buffer.concat(chunks);
-
+    const pdfBytes = await editor.readDownloadBuffer(download);
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const form = pdfDoc.getForm();
     const fieldNames = form.getFields().map((f) => f.getName());
@@ -129,6 +134,32 @@ test.describe('エクスポート・インポート', () => {
     expect(fieldNames).toContain('form_text');
     expect(fieldNames).toContain('form_check');
     expect(fieldNames).toHaveLength(2);
+  });
+
+  test('重複名フィールドではフォームPDF出力がブロックされる', async ({ page }) => {
+    // 2つのフィールドを同じ名前で作成
+    await editor.clickOnCanvas(200, 300);
+    await editor.fieldNameInput.fill('duplicate_name');
+    await editor.closePopover();
+
+    await editor.clickOnCanvas(200, 400);
+    await editor.fieldNameInput.fill('duplicate_name');
+    await editor.closePopover();
+
+    // dialogを自動dismissするリスナーを登録しつつメッセージをキャプチャ
+    let dialogMessage = '';
+    page.on('dialog', async (dialog) => {
+      dialogMessage = dialog.message();
+      await dialog.dismiss();
+    });
+
+    await editor.exportFormPdfButton.click();
+
+    // alertが発火してバリデーションエラーメッセージを含むこと
+    await expect(() => expect(dialogMessage).toContain('重複')).toPass({ timeout: 5000 });
+
+    // ダウンロードが発生しないこと（ボタンは有効のまま）
+    await expect(editor.exportFormPdfButton).toBeEnabled();
   });
 
   test('フィールドなしではフォームPDFボタンが無効', async () => {

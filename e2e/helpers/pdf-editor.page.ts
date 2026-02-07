@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type Locator, type Page, expect } from '@playwright/test';
+import { type Download, type Locator, type Page, expect } from '@playwright/test';
 
 const FIXTURES_DIR = path.join(__dirname, '..', 'fixtures', 'generated');
 
@@ -110,5 +110,15 @@ export class PdfEditorPage {
     // フィールドリストのヘッダー部分をクリックしてポップオーバーを閉じる
     await this.fieldList.locator('span').filter({ hasText: 'フィールド' }).click();
     await expect(this.fieldPopover).not.toBeVisible();
+  }
+
+  async readDownloadBuffer(download: Download): Promise<Buffer> {
+    const stream = await download.createReadStream();
+    if (!stream) throw new Error('Failed to create read stream from download');
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk as Buffer);
+    }
+    return Buffer.concat(chunks);
   }
 }
