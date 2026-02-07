@@ -10,7 +10,7 @@ interface UsePdfEditorOptions {
   overlayRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
-function downloadBlob(blob: Blob, filename: string) {
+function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -496,6 +496,18 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     }
   };
 
+  // フィールド作成
+  const createField = (params: Omit<FieldDefinition, 'id' | 'name'> & { name?: string }) => {
+    const id = crypto.randomUUID();
+    setFields((prev) => [...prev, {
+      ...params,
+      id,
+      name: params.name ?? `field_${prev.length + 1}`,
+    }]);
+    setSelectedField(id);
+    return id;
+  };
+
   // マウスアップ
   const handleMouseUp = () => {
     if (isSelecting && selectionStart && selectionEnd) {
@@ -550,18 +562,6 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setDragStartPos(null);
     setDragStartFieldPos(null);
     setIsSelecting(false);
-  };
-
-  // フィールド作成
-  const createField = (params: Omit<FieldDefinition, 'id' | 'name'> & { name?: string }) => {
-    const id = crypto.randomUUID();
-    setFields((prev) => [...prev, {
-      ...params,
-      id,
-      name: params.name ?? `field_${prev.length + 1}`,
-    }]);
-    setSelectedField(id);
-    return id;
   };
 
   // フィールド削除

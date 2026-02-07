@@ -37,7 +37,7 @@ export function EditorHeader({
   isDetecting,
   onRunDetection,
 }: EditorHeaderProps) {
-  const [showGridPopover, onShowGridChangePopover] = useState(false);
+  const [showGridPopover, setShowGridPopover] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   const handleRunDetection = () => {
@@ -90,7 +90,7 @@ export function EditorHeader({
         <div className="flex items-center gap-2">
           <div className="relative">
             <button
-              onClick={() => onShowGridChangePopover(!showGridPopover)}
+              onClick={() => setShowGridPopover(!showGridPopover)}
               className={`rounded px-2 py-1 text-xs transition-colors ${
                 snapEnabled ? 'bg-bp-accent text-white' : 'bg-bp-bg text-bp-text'
               }`}
@@ -100,7 +100,7 @@ export function EditorHeader({
             </button>
             {showGridPopover && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => onShowGridChangePopover(false)} data-testid="grid-popover-overlay" />
+                <div className="fixed inset-0 z-10" onClick={() => setShowGridPopover(false)} data-testid="grid-popover-overlay" />
                 <div className="absolute top-full left-0 z-20 mt-1 w-48 rounded border border-bp-border bg-bp-panel p-3 shadow-lg">
                   <label className="mb-2 flex cursor-pointer items-center gap-2">
                     <input
