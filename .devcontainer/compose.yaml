@@ -8,6 +8,7 @@ services:
       - claude-code-config:/home/node/.claude
     environment:
       CLAUDE_CONFIG_DIR: /home/node/.claude
+    command: sleep infinity
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.pdf-form-studio.rule=Host(`pdf-form-studio.dev.test`)"
