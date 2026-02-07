@@ -48,17 +48,25 @@ async function generateMultiPagePdf(): Promise<Buffer> {
 }
 
 async function globalSetup() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  try {
+    if (!fs.existsSync(OUTPUT_DIR)) {
+      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    }
+  } catch (err) {
+    throw new Error(`Failed to create fixtures directory at ${OUTPUT_DIR}: ${err instanceof Error ? err.message : err}`);
   }
 
-  const [simplePdf, multiPagePdf] = await Promise.all([
-    generateSimplePdf(),
-    generateMultiPagePdf(),
-  ]);
+  try {
+    const [simplePdf, multiPagePdf] = await Promise.all([
+      generateSimplePdf(),
+      generateMultiPagePdf(),
+    ]);
 
-  fs.writeFileSync(path.join(OUTPUT_DIR, 'simple.pdf'), simplePdf);
-  fs.writeFileSync(path.join(OUTPUT_DIR, 'multi-page.pdf'), multiPagePdf);
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'simple.pdf'), simplePdf);
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'multi-page.pdf'), multiPagePdf);
+  } catch (err) {
+    throw new Error(`Failed to generate test PDFs: ${err instanceof Error ? err.message : err}`);
+  }
 }
 
 export default globalSetup;

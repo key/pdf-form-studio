@@ -58,7 +58,7 @@ export class PdfEditorPage {
   }
 
   async goto() {
-    // API呼び出し防止ルート設定
+    // AI検出APIをモック: configでボタン非表示にし、POSTは安全策としてブロック
     await this.page.route('**/api/detect-fields/config', (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ available: false }) }),
     );
@@ -69,6 +69,12 @@ export class PdfEditorPage {
 
   async uploadPdf(name: 'simple' | 'multi-page') {
     const pdfPath = path.join(FIXTURES_DIR, `${name}.pdf`);
+    if (!fs.existsSync(pdfPath)) {
+      throw new Error(
+        `Test PDF not found: ${pdfPath}\n` +
+        'Run "pnpm test:e2e" to generate fixtures via globalSetup.',
+      );
+    }
     const buffer = fs.readFileSync(pdfPath);
     await this.fileInput.setInputFiles({
       name: `${name}.pdf`,
@@ -98,15 +104,6 @@ export class PdfEditorPage {
     await this.page.mouse.down();
     await this.page.mouse.move(box.x + to.x, box.y + to.y, { steps: 10 });
     await this.page.mouse.up();
-  }
-
-  async expectFieldCount(n: number) {
-    const fieldItems = this.fieldList.locator('button');
-    await expect(fieldItems).toHaveCount(n);
-  }
-
-  async getFieldListItems() {
-    return this.fieldList.locator('button');
   }
 
   async closePopover() {

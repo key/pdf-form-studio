@@ -100,7 +100,7 @@ export function EditorHeader({
             </button>
             {showGridPopover && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowGridPopover(false)} />
+                <div className="fixed inset-0 z-10" onClick={() => setShowGridPopover(false)} data-testid="grid-popover-overlay" />
                 <div className="absolute top-full left-0 z-20 mt-1 w-48 rounded border border-bp-border bg-bp-panel p-3 shadow-lg">
                   <label className="mb-2 flex cursor-pointer items-center gap-2">
                     <input
