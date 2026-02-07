@@ -10,6 +10,15 @@ interface UsePdfEditorOptions {
   overlayRef: React.RefObject<HTMLCanvasElement | null>;
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   const renderTaskRef = useRef<RenderTask | null>(null);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
@@ -23,7 +32,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   const [showGrid, setShowGrid] = useState(true);
   const [gridSize, setGridSize] = useState(7.5);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isPdfjsLoading, setIsPdfjsLoading] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
@@ -48,11 +57,10 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
         const pdfjs = await import('pdfjs-dist');
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
         setPdfjsLib(pdfjs);
-        console.log('PDF.js loaded, version:', pdfjs.version);
       } catch (error) {
         console.error('Failed to load PDF.js:', error);
       } finally {
-        setIsLoading(false);
+        setIsPdfjsLoading(false);
       }
     };
     loadPdfjs();
@@ -84,7 +92,6 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       setTotalPages(pdf.numPages);
       setCurrentPage(1);
       setPdfFileName(file.name);
-      console.log('PDF loaded:', pdf.numPages, 'pages');
     } catch (error) {
       console.error('Failed to load PDF:', error);
       alert(`PDFの読み込みに失敗しました: ${error instanceof Error ? error.message : String(error)}`);
@@ -392,11 +399,11 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     ctx.arc(left, top + height, 5, 0, Math.PI * 2);
     ctx.fill();
 
-    const pdfWidth = Math.round(Math.abs(width) / scale);
-    const pdfHeightVal = Math.round(Math.abs(height) / scale);
+    const pdfRectWidth = Math.round(Math.abs(width) / scale);
+    const pdfRectHeight = Math.round(Math.abs(height) / scale);
     ctx.fillStyle = '#000';
     ctx.font = '12px monospace';
-    ctx.fillText(`${pdfWidth} × ${pdfHeightVal} pt`, left + 5, top + 15);
+    ctx.fillText(`${pdfRectWidth} × ${pdfRectHeight} pt`, left + 5, top + 15);
   }, [isSelecting, selectionStart, selectionEnd, scale, snapEnabled, gridSize, pdfDimensions, overlayRef]);
 
   // マウスダウン
@@ -500,10 +507,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       if (right - left < 5 && bottom - top < 5) {
         // ポイントクリック → フィールド即時作成
         const pdfPos = canvasToPdf(selectionStart.x, selectionStart.y);
-        const id = crypto.randomUUID();
-        setFields((prev) => [...prev, {
-          id,
-          name: `field_${prev.length + 1}`,
+        createField({
           type: 'text',
           page: currentPage,
           x: snapToGrid(pdfPos.x),
@@ -511,18 +515,13 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           width: 50,
           height: 20,
           fontSize: 10,
-        }]);
-        setSelectedField(id);
-
+        });
       } else {
         // 矩形ドラッグ → 矩形サイズでフィールド即時作成
         const pdfPos = canvasToPdf(left, bottom);
         const width = Math.round((right - left) / scale);
         const height = Math.round((bottom - top) / scale);
-        const id = crypto.randomUUID();
-        setFields((prev) => [...prev, {
-          id,
-          name: `field_${prev.length + 1}`,
+        createField({
           type: 'text',
           page: currentPage,
           x: snapToGrid(pdfPos.x),
@@ -530,9 +529,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           width: snapToGrid(width),
           height: snapToGrid(height),
           fontSize: 10,
-        }]);
-        setSelectedField(id);
-
+        });
       }
     }
 
@@ -553,6 +550,18 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     setDragStartPos(null);
     setDragStartFieldPos(null);
     setIsSelecting(false);
+  };
+
+  // フィールド作成
+  const createField = (params: Omit<FieldDefinition, 'id' | 'name'> & { name?: string }) => {
+    const id = crypto.randomUUID();
+    setFields((prev) => [...prev, {
+      ...params,
+      id,
+      name: params.name ?? `field_${prev.length + 1}`,
+    }]);
+    setSelectedField(id);
+    return id;
   };
 
   // フィールド削除
@@ -613,12 +622,8 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = pdfFileName ? pdfFileName.replace(/\.pdf$/i, '') + '.json' : 'pdf_field_mapping.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    const filename = pdfFileName ? pdfFileName.replace(/\.pdf$/i, '') + '.json' : 'pdf_field_mapping.json';
+    downloadBlob(blob, filename);
   };
 
   // JSONインポート
@@ -636,7 +641,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
           return;
         }
         setFields(
-          data.fields.map((f: Omit<FieldDefinition, 'id'>, i: number) => ({
+          data.fields.map((f: Omit<FieldDefinition, 'id'>) => ({
             ...f,
             id: crypto.randomUUID(),
           }))
@@ -660,7 +665,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
 
     const errors = validateFields(fields);
     if (errors.length > 0) {
-      const messages = errors.map((e) => e.message).join('\n');
+      const messages = errors.map((err) => err.message).join('\n');
       alert(`エクスポートできません:\n\n${messages}`);
       return;
     }
@@ -668,12 +673,8 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     try {
       const pdfBytes = await generateFormPdf(pdfArrayBuffer, fields);
       const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = pdfFileName ? pdfFileName.replace(/\.pdf$/i, '') + '_form.pdf' : 'form.pdf';
-      a.click();
-      URL.revokeObjectURL(url);
+      const filename = pdfFileName ? pdfFileName.replace(/\.pdf$/i, '') + '_form.pdf' : 'form.pdf';
+      downloadBlob(blob, filename);
     } catch (error) {
       console.error('Failed to generate form PDF:', error);
       alert(`フォームPDFの生成に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
@@ -754,7 +755,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
     scale,
     setScale,
     pdfDimensions,
-    isLoading,
+    isPdfjsLoading,
     isPdfLoading,
     loadPdf,
     pdfFileName,

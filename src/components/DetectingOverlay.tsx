@@ -1,5 +1,3 @@
-'use client';
-
 export function DetectingOverlay() {
   return (
     <div className="absolute inset-0 z-40 flex items-center justify-center bg-bp-text/30 backdrop-blur-sm">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { FieldDefinition } from '@/types';
 
 interface FieldPopoverProps {
@@ -14,14 +14,14 @@ interface FieldPopoverProps {
 export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: FieldPopoverProps) {
   const [name, setName] = useState(field.name);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // 名前変更を即時反映
-  useEffect(() => {
-    if (name !== field.name && name.trim()) {
-      onUpdate(field.id, { name: name.trim() });
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setName(newName);
+    if (newName.trim()) {
+      onUpdate(field.id, { name: newName.trim() });
     }
-  }, [name, field.id, field.name, onUpdate]);
+  };
 
   // 外側クリックで閉じる
   useEffect(() => {
@@ -38,8 +38,6 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose]);
-
-  // inputRef is available for programmatic focus if needed
 
   const handleTypeChange = (type: 'text' | 'checkbox') => {
     if (type === field.type) return;
@@ -65,10 +63,9 @@ export function FieldPopover({ field, position, onUpdate, onDelete, onClose }: F
       }}
     >
       <input
-        ref={inputRef}
         type="text"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={handleNameChange}
         className="mb-2 w-full rounded border border-bp-border px-2 py-1 text-sm focus:border-bp-accent focus:outline-none"
         placeholder="フィールド名"
         data-testid="field-name-input"

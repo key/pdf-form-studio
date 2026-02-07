@@ -1,5 +1,3 @@
-'use client';
-
 import type { FieldDefinition } from '@/types';
 
 interface FieldListProps {

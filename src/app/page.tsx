@@ -16,12 +16,13 @@ export default function PdfEditorPage() {
   const editor = usePdfEditor({ canvasRef, overlayRef });
 
   // pdfDocが設定されたら自動検出を実行
+  const { pdfDoc, detectionAvailable, runFieldDetection } = editor;
   useEffect(() => {
-    if (editor.pdfDoc && editor.detectionAvailable && !hasTriggeredDetection.current) {
+    if (pdfDoc && detectionAvailable && !hasTriggeredDetection.current) {
       hasTriggeredDetection.current = true;
-      editor.runFieldDetection();
+      runFieldDetection();
     }
-  }, [editor.pdfDoc, editor.detectionAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pdfDoc, detectionAvailable, runFieldDetection]);
 
   const handleClose = () => {
     hasTriggeredDetection.current = false;
@@ -33,7 +34,7 @@ export default function PdfEditorPage() {
     return (
       <DropZone
         onFileSelect={editor.loadPdf}
-        isLoading={editor.isLoading}
+        isLoading={editor.isPdfjsLoading}
       />
     );
   }
@@ -58,13 +59,13 @@ export default function PdfEditorPage() {
         onExportFormPdf={editor.exportFormPdf}
         onClose={handleClose}
         showGrid={editor.showGrid}
-        setShowGrid={editor.setShowGrid}
+        onShowGridChange={editor.setShowGrid}
         gridSize={editor.gridSize}
-        setGridSize={editor.setGridSize}
+        onGridSizeChange={editor.setGridSize}
         snapEnabled={editor.snapEnabled}
-        setSnapEnabled={editor.setSnapEnabled}
+        onSnapEnabledChange={editor.setSnapEnabled}
         scale={editor.scale}
-        setScale={editor.setScale}
+        onScaleChange={editor.setScale}
         detectionAvailable={editor.detectionAvailable}
         isDetecting={editor.isDetecting}
         onRunDetection={editor.runFieldDetection}
@@ -123,7 +124,7 @@ export default function PdfEditorPage() {
           {/* ビューコントロール */}
           <ViewControls
             currentPage={editor.currentPage}
-            setCurrentPage={editor.setCurrentPage}
+            onPageChange={editor.setCurrentPage}
             totalPages={editor.totalPages}
           />
         </div>

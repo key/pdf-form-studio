@@ -34,7 +34,7 @@ export async function checkDetectionAvailable(): Promise<boolean> {
   }
 }
 
-export async function renderAllPagesToImages(
+async function renderAllPagesToImages(
   pdfDoc: PDFDocumentProxy,
 ): Promise<PageImage[]> {
   const numPages = Math.min(pdfDoc.numPages, MAX_PAGES);
