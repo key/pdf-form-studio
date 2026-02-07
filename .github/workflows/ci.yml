@@ -28,6 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Use CI compose config
+        run: sed -i 's/compose.yaml/compose.ci.yaml/' .devcontainer/devcontainer.json
+
       - name: Build and lint in dev container
         uses: devcontainers/ci@v0.3
         with:
