@@ -5,3 +5,4 @@ services:
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/workspaces/pdf-form-studio:cached
+    command: sleep infinity
