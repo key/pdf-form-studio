@@ -1,0 +1,23 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspaces/pdf-form-studio:cached
+      - claude-code-config:/home/node/.claude
+    environment:
+      CLAUDE_CONFIG_DIR: /home/node/.claude
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pdf-form-studio.rule=Host(`pdf-form-studio.dev.test`)"
+      - "traefik.http.services.pdf-form-studio.loadbalancer.server.port=3000"
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  claude-code-config:
