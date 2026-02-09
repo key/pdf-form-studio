@@ -63,6 +63,12 @@ pnpm knip            # 未使用コード・依存関係の検出
 - テキストフィールドには width/height/fontSize/align/valign
 - チェックボックスは位置のみ
 
+## DevContainer
+
+- `.devcontainer/compose.yaml` — 開発用フル設定（traefik統合済み）。VS Codeが自動でワークスペースマウントを追加するため、volumesにワークスペースは書かない
+- `.devcontainer/compose.ci.yaml` — CI専用（traefikなし、ワークスペースマウントあり）。CIではsedでdevcontainer.jsonの参照先を書き換えて使用
+- `.devcontainer/compose.override.yaml` — gitignore対象。ローカル上書き用（個人設定向け）
+
 ## パスエイリアス
 
 `@/*` → `./src/*`
