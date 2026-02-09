@@ -9,4 +9,3 @@ pnpm exec playwright install --with-deps chromium
 
 # Claude Code
 claude install
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
