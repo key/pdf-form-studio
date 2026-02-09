@@ -24,11 +24,11 @@ pnpm knip            # 未使用コード・依存関係の検出
 - Next.js 16 (App Router)
 - React 19 + TypeScript
 - Tailwind CSS
-- pdfjs-dist 4.9.155（PDF.js）
+- pdfjs-dist 5.4.624（PDF.js）
 
 ### 依存関係の注意点
 
-- **pdfjs-dist**: v4.9.155に固定。v5系はNext.js 16との互換性問題があるため使用不可
+- **pdfjs-dist**: v5系。`pdf.mjs`（非minified）は内部にwebpack bootstrapコードを含み、Next.jsのwebpackと衝突するため、`pdfjs-dist/build/pdf.min.mjs`からインポートすること
 - **next dev**: `--webpack`フラグ必須（Turbopackとの互換性問題回避）
 
 ## アーキテクチャ
@@ -66,6 +66,10 @@ pnpm knip            # 未使用コード・依存関係の検出
 ## パスエイリアス
 
 `@/*` → `./src/*`
+
+## CI確認ガイドライン
+
+PR/issueのCI Checksを確認する際は、成否の報告だけでなく、失敗しているジョブがあればログ・詳細を自律的に調査し、原因まで報告すること（ユーザーへの確認は不要）。
 
 ## UI設計ガイドライン
 

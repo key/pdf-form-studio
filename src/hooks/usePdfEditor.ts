@@ -57,7 +57,7 @@ export function usePdfEditor({ canvasRef, overlayRef }: UsePdfEditorOptions) {
   useEffect(() => {
     const loadPdfjs = async () => {
       try {
-        const pdfjs = await import('pdfjs-dist');
+        const pdfjs = await import('pdfjs-dist/build/pdf.min.mjs');
         pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
         setPdfjsLib(pdfjs);
       } catch (error) {
